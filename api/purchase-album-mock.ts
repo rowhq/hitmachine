@@ -17,13 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(405).json({ error: 'Method not allowed. Use GET.' });
         }
 
-        const indexParam = req.query.index;
-        const index = parseInt(indexParam as string, 10);
-
-        // Validate index range
-        if (isNaN(index) || index <= 0) {
-            return res.status(400).json({ error: 'Account index must be an integer > 0' });
-        }
+        const address = req.query.address as `0x${string}`;
+        const index = await kv.get(`wallet_address_to_index:${address.toLowerCase()}`) as number;
 
         const maxIndex = await kv.get('wallet_index');
         if (index > Number(maxIndex)) {

@@ -14,7 +14,7 @@ import { erc20Abi } from 'viem';
 const MNEMONIC = process.env.MNEMONIC!;
 const RPC_URL = process.env.RPC_URL!;
 const USDC_ADDRESS = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F';
-const STORE_CONTRACT = "0x2619Aed377C6fC5BdC56d30A4347406dE9cd2A2c"; //TODO: Replace with actual store contract address
+const STORE_CONTRACT = "0x2619Aed377C6fC5BdC56d30A4347406dE9cd2A2c"; // TODO: Replace with actual store contract address
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
@@ -22,12 +22,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(405).json({ error: 'Method not allowed. Use GET.' });
         }
 
-        const indexParam = req.query.index;
-        const index = parseInt(indexParam as string, 10);
+        const address = req.query.address as `0x${string}`;
+        const index = await kv.get(`wallet_address_to_index:${address.toLowerCase()}`) as number;
 
         // Validate index range
-        if (isNaN(index) || index <= 0) {
-            return res.status(400).json({ error: 'Index must be an integer > 0' });
+        if (isNaN(index) || index < 0) {
+            return res.status(400).json({ error: 'Index must be a non-negative integer' });
         }
 
         const maxIndex = await kv.get('wallet_index');

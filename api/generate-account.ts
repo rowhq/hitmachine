@@ -19,17 +19,15 @@ const COINGECKO_URL =
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
-        const nextIndex = await kv.incr('wallet_index');
-        if (nextIndex === 0) {
-            await kv.incr('wallet_index');
-            return res.status(500).json({ error: 'Index 0 is reserved.' });
-        }
+        await kv.set('wallet_index', 0); // reset
+        const index = await kv.get('wallet_index');
 
         // Derive accounts
         const funder = mnemonicToAccount(MNEMONIC, { path: `m/44'/60'/0'/0/0` });
         const recipient = mnemonicToAccount(MNEMONIC, {
-            path: `m/44'/60'/0'/0/${nextIndex}`
+            path: `m/44'/60'/0'/0/${index}`
         });
+
         const client = createWalletClient({
             account: funder,
             chain: sophon,
@@ -72,10 +70,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const [usdcHash, nativeHash] = await Promise.all([usdcTx, nativeTx]);
 
+        // ✅ Store address => index mapping in KV
+        await kv.set(`wallet_address_to_index:${recipient.address.toLowerCase()}`, index);
+
         return res.status(200).json({
             message: 'Account created; funded with 0.01 USDC and ~$0.02 SOPH',
             address: recipient.address,
-            index: nextIndex,
+            index,
             txHashes: { usdc: usdcHash, soph: nativeHash },
             sophSent: amountSOPH,
             priceUsd: sophPriceUsd
