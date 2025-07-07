@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const [usdcHash, nativeHash] = await Promise.all([usdcTx, nativeTx]);
 
         return res.status(200).json({
-            message: 'Account created; funded with 8 USDC and ~$0.02 SOPH',
+            message: 'Account created; funded with 0.01 USDC and ~$0.02 SOPH',
             address: recipient.address,
             index: nextIndex,
             txHashes: { usdc: usdcHash, soph: nativeHash },
