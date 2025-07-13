@@ -19,7 +19,7 @@ const COINGECKO_URL =
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
-        await kv.set('wallet_index', 0); // reset
+
         const index = await kv.get('wallet_index');
 
         // Derive accounts

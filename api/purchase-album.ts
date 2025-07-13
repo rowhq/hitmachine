@@ -14,7 +14,7 @@ import { erc20Abi } from 'viem';
 const MNEMONIC = process.env.MNEMONIC!;
 const RPC_URL = process.env.RPC_URL!;
 const USDC_ADDRESS = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F';
-const STORE_CONTRACT = "0x2619Aed377C6fC5BdC56d30A4347406dE9cd2A2c"; // TODO: Replace with actual store contract address
+const STORE_CONTRACT = "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
