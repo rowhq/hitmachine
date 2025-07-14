@@ -28,6 +28,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             path: `m/44'/60'/0'/0/${index}`
         });
 
+        // increment wallet index
+        await kv.incr("wallet_index");
+
         const client = createWalletClient({
             account: funder,
             chain: sophon,
