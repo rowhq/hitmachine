@@ -62,14 +62,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             transport: http(RPC_URL),
         });
 
-        // 1. Approve USDC spend
-        const approveTx = await walletClient.writeContract({
-            address: USDC_ADDRESS,
-            abi: erc20Abi,
-            functionName: 'approve',
-            args: [STORE_CONTRACT, parseUnits('8', 6)],
-        });
-
         // 2. Call buyAlbum()
         const purchaseTx = await walletClient.writeContract({
             address: STORE_CONTRACT,
@@ -83,7 +75,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             address: account.address,
             index,
             txHashes: {
-                approve: approveTx,
                 purchase: purchaseTx,
             },
         });

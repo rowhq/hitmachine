@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { mnemonicToAccount } from 'viem/accounts';
+import { mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
 import {
     createWalletClient,
     createPublicClient,
@@ -10,9 +10,11 @@ import {
 import { erc20Abi } from 'viem';
 import { sophon } from 'viem/chains';
 import { kv } from '@vercel/kv';
+import storeAbi from './abi/store.json';
 
 const MNEMONIC = process.env.MNEMONIC!;
 const USDC_ADDRESS = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F';
+const STORE_CONTRACT = "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5";
 const RPC_URL = process.env.RPC_URL!;
 const COINGECKO_URL =
     'https://api.coingecko.com/api/v3/simple/price?ids=sophon&vs_currencies=usd';
@@ -23,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const index = await kv.get('wallet_index');
 
         // Derive accounts
-        const funder = mnemonicToAccount(MNEMONIC, { path: `m/44'/60'/0'/0/0` });
+        const funder = privateKeyToAccount(`0x${process.env.WALLET_PRIVATE_KEY!}`);
         const recipient = mnemonicToAccount(MNEMONIC, {
             path: `m/44'/60'/0'/0/${index}`
         });
@@ -57,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         // Prepare transfers
-        const usdcTx = client.writeContract({
+        const usdcTxHash = client.writeContract({
             address: USDC_ADDRESS,
             abi: erc20Abi,
             functionName: 'transfer',
@@ -65,13 +67,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             nonce: confirmedNonce
         });
 
-        const nativeTx = client.sendTransaction({
+        const clientGenerated = createWalletClient({
+            account: recipient,
+            chain: sophon,
+            transport: http(RPC_URL)
+        });
+
+        // 1. Estimate gas for approve()
+        const approveGasEstimate = await publicClient.estimateContractGas({
+            address: USDC_ADDRESS,
+            abi: erc20Abi,
+            functionName: 'approve',
+            args: [STORE_CONTRACT, parseUnits('0.01', 6)],
+            account: funder.address,
+        });
+
+        // Query current gas price
+        const approveGasPrice = await publicClient.getGasPrice();
+
+        // Calculate required SOPH to cover approve gas
+        const approveGasFee = approveGasEstimate * approveGasPrice;
+        const bufferMultiplier = BigInt(13); // +30% safety buffer
+        const approveGasFeeBuffered = (approveGasFee * bufferMultiplier) / BigInt(10);
+
+
+        // Send SOPH to recipient to cover approve gas
+        const approveFundingTxHash = await client.sendTransaction({
             to: recipient.address,
-            value: parseEther(amountSOPH),
+            value: approveGasFeeBuffered,
             nonce: confirmedNonce + 1
         });
 
-        const [usdcHash, nativeHash] = await Promise.all([usdcTx, nativeTx]);
+        await publicClient.waitForTransactionReceipt({ hash: approveFundingTxHash });
+
+
+        // Approve USDC spend on generated account
+        const approveTxHash = await clientGenerated.writeContract({
+            address: USDC_ADDRESS,
+            abi: erc20Abi,
+            functionName: 'approve',
+            args: [STORE_CONTRACT, parseUnits('0.01', 6)],
+        });
+
+        await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
+
+        // 2. Estimate gas for buyAlbum()
+        const gasEstimate = await publicClient.estimateContractGas({
+            address: STORE_CONTRACT,
+            abi: storeAbi,
+            functionName: 'buyAlbum',
+            args: [],
+            account: recipient.address,
+        });
+
+        // 3. Query current gas price
+        const gasPrice = await publicClient.getGasPrice();
+
+        // 4. Calculate required SOPH to cover gas
+        const gasFee = gasEstimate * gasPrice;
+
+        const nativeTxHash = await client.sendTransaction({
+            to: recipient.address,
+            value: gasFee,
+            nonce: confirmedNonce + 2
+        });
+
+        await publicClient.waitForTransactionReceipt({ hash: nativeTxHash });
+
 
         // ✅ Store address => index mapping in KV
         await kv.set(`wallet_address_to_index:${recipient.address.toLowerCase()}`, index);
@@ -80,7 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: 'Account created; funded with 0.01 USDC and ~$0.02 SOPH',
             address: recipient.address,
             index,
-            txHashes: { usdc: usdcHash, soph: nativeHash },
+            txHashes: { usdc: usdcTxHash, soph: nativeTxHash, approveTxHash: approveTxHash },
             sophSent: amountSOPH,
             priceUsd: sophPriceUsd
         });
