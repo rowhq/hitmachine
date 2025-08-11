@@ -1,18 +1,20 @@
 {
+  "rootDirectory": "frontend",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
   "functions": {
-    "api/generate-account.ts": {
+    "app/api/generate-account/route.ts": {
       "maxDuration": 10
     },
-    "api/purchase-album.ts": {
+    "app/api/purchase-album/route.ts": {
+      "maxDuration": 10
+    },
+    "app/api/check-balances/route.ts": {
       "maxDuration": 10
     }
   },
-  "crons": [
-    {
-      "path": "/api/cron/refill-jobs",
-      "schedule": "0 */6 * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
