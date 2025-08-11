@@ -1,5 +1,12 @@
-.vercel
 .env
-node_modules
+.env.local
+.env.production
+.env.development
+.env.test
+.vercel
 artifacts-zk
 cache-zk
+node_modules
+supabase/.temp
+*.log
+.DS_Store

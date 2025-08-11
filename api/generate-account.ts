@@ -11,6 +11,7 @@ import { erc20Abi } from 'viem';
 import { sophon } from 'viem/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from './abi/store.json';
+import { trackIP } from '../lib/track';
 
 const MNEMONIC = process.env.MNEMONIC!;
 const USDC_ADDRESS = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F';
@@ -21,6 +22,8 @@ const COINGECKO_URL =
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
+        // Track this request
+        trackIP(req, 'generate-account');
 
         const index = await kv.get('wallet_index');
 
@@ -137,6 +140,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // ✅ Store address => index mapping in KV
         await kv.set(`wallet_address_to_index:${recipient.address.toLowerCase()}`, index);
+
+        // Track successful wallet generation
+        trackIP(req, 'generate-account-success', recipient.address);
 
         return res.status(200).json({
             message: 'Account created; funded with 0.01 USDC and ~$0.02 SOPH',

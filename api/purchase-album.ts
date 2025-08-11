@@ -10,6 +10,7 @@ import { kv } from '@vercel/kv';
 import { parseUnits } from 'viem/utils';
 import storeAbi from './abi/store.json';
 import { erc20Abi } from 'viem';
+import { trackIP } from '../lib/track';
 
 const MNEMONIC = process.env.MNEMONIC!;
 const RPC_URL = process.env.RPC_URL!;
@@ -23,6 +24,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const address = req.query.address as `0x${string}`;
+        
+        // Track this request
+        trackIP(req, 'purchase-album', address);
+        
         const index = await kv.get(`wallet_address_to_index:${address.toLowerCase()}`) as number;
 
         // Validate index range
@@ -69,6 +74,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             functionName: 'buyAlbum',
             args: [],
         });
+
+        // Track successful purchase
+        trackIP(req, 'purchase-album-success', address, { txHash: purchaseTx });
 
         return res.status(200).json({
             message: 'Album purchased successfully',
