@@ -28,8 +28,13 @@ deploy-legacy:
 deploy:
 	forge script script/DeployUpgradeable.s.sol:DeployUpgradeableScript --rpc-url $(NETWORK) --broadcast --verify -vvvv
 
-# Deploy upgradeable to testnet
+# Deploy upgradeable to testnet (with full setup)
 deploy-testnet:
+	@echo "Running full testnet deployment with ABIs and frontend setup..."
+	./deploy-to-testnet.sh
+
+# Deploy upgradeable to testnet (manual)
+deploy-testnet-manual:
 	forge script script/DeployUpgradeable.s.sol:DeployUpgradeableScript --rpc-url sophon_testnet --broadcast --verify -vvvv
 
 # Deploy upgradeable to mainnet
