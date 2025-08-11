@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HitMachine Admin Dashboard
 
-## Getting Started
+A Next.js admin dashboard for managing Store and Jobs smart contracts on the Sophon network.
 
-First, run the development server:
+## Features
 
+- 🔐 Wallet connection via RainbowKit
+- 📊 Real-time contract stats monitoring
+- 💰 Generate and fund test wallets
+- 🏪 Store contract management (withdraw, pause/unpause)
+- 💼 Jobs contract management (claim, pay users, emergency controls)
+- 🔄 Integrated API routes for blockchain interactions
+
+## Setup
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Copy environment variables:
+```bash
+cp .env.example .env.local
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Update `.env.local` with your values:
+- Contract addresses (after deployment)
+- WalletConnect Project ID
+- Private keys and mnemonic
+- Vercel KV credentials
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run development server:
+```bash
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000)
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deploy to Vercel:
+```bash
+vercel
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The app includes API routes that handle:
+- `/api/generate-account` - Create and fund new wallets
+- `/api/purchase-album` - Execute album purchases
+- `/api/check-balances` - Monitor contract balances
 
-## Deploy on Vercel
+## API Routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+All API routes are integrated into the Next.js app using App Router:
+- Serverless functions run alongside the frontend
+- Single deployment for both UI and API
+- Shared environment variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contract Interaction
+
+The dashboard allows admin users to:
+
+### Store Contract
+- Withdraw all funds to a specified address
+- Withdraw specific amounts
+- Pause/unpause contract operations
+
+### Jobs Contract  
+- Claim funds from Store contract
+- Pay users (USDC and/or native token)
+- Emergency withdraw
+- Pause/unpause operations
+
+## Development
+
+```bash
+# Run dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```

@@ -46,7 +46,7 @@ export default function ContractStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`${config.API_URL}/api/check-balances`);
+        const response = await fetch('/api/check-balances');
         const data = await response.json();
         setApiStats(data);
       } catch (err) {
