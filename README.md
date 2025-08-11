@@ -1,3 +1,26 @@
+# HitMachine
+
+A blockchain-based album purchase system built on the Sophon network using upgradeable smart contracts.
+
+## Overview
+
+HitMachine enables users to purchase albums using USDC on the Sophon network. The system features:
+- UUPS upgradeable smart contracts for future improvements
+- Role-based access control for secure fund management
+- Integrated Next.js frontend with API endpoints
+- Automated CI/CD with Claude Code reviews
+
+## Architecture
+
+### Smart Contracts
+- **StoreV2**: Handles album purchases at configurable prices
+- **JobsV2**: Manages fund distribution and claims from Store
+
+### Frontend
+- Next.js application with integrated API routes
+- Support for wallet generation and album purchases
+- Real-time balance checking
+
 ## Foundry
 
 **Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
