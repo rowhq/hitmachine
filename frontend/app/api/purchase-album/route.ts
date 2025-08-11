@@ -5,14 +5,14 @@ import {
     createPublicClient,
     http,
 } from 'viem';
-import { sophon } from 'viem/chains';
+import { sophonTestnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/storeV2.json';
 import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
-const RPC_URL = process.env.RPC_URL || 'https://rpc.sophon.xyz';
-const STORE_CONTRACT = process.env.NEXT_PUBLIC_STORE_CONTRACT || "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5";
+const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
+const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`; // Will be updated after deployment
 
 export async function OPTIONS(request: NextRequest) {
     return new NextResponse(null, { status: 200, headers: corsHeaders() });
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         });
 
         const publicClient = createPublicClient({
-            chain: sophon,
+            chain: sophonTestnet,
             transport: http(RPC_URL),
         });
 
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
         const walletClient = createWalletClient({
             account,
-            chain: sophon,
+            chain: sophonTestnet,
             transport: http(RPC_URL),
         });
 

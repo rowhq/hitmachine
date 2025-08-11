@@ -7,15 +7,15 @@ import {
     parseUnits
 } from 'viem';
 import { erc20Abi } from 'viem';
-import { sophon } from 'viem/chains';
+import { sophonTestnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/storeV2.json';
 import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
-const USDC_ADDRESS = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F';
-const STORE_CONTRACT = process.env.NEXT_PUBLIC_STORE_CONTRACT || "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5";
-const RPC_URL = process.env.RPC_URL || 'https://rpc.sophon.xyz';
+const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`; // Will be updated after deployment
+const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`; // Will be updated after deployment
+const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
 const COINGECKO_URL =
     'https://api.coingecko.com/api/v3/simple/price?ids=sophon&vs_currencies=usd';
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
         const client = createWalletClient({
             account: funder,
-            chain: sophon,
+            chain: sophonTestnet,
             transport: http(RPC_URL)
         });
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         const amountSOPH = (amountUsd / sophPriceUsd).toFixed(18);
 
         const publicClient = createPublicClient({
-            chain: sophon,
+            chain: sophonTestnet,
             transport: http(RPC_URL)
         });
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
         const clientGenerated = createWalletClient({
             account: recipient,
-            chain: sophon,
+            chain: sophonTestnet,
             transport: http(RPC_URL)
         });
 

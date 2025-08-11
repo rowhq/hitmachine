@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, formatUnits } from 'viem';
-import { sophon } from 'viem/chains';
+import { sophonTestnet } from '../../config/chains';
 import jobsAbi from '../../abi/jobsV2.json';
 import storeAbi from '../../abi/storeV2.json';
 import { corsHeaders } from '../cors';
 
-const JOBS_CONTRACT = process.env.NEXT_PUBLIC_JOBS_CONTRACT as `0x${string}`;
-const STORE_CONTRACT = process.env.NEXT_PUBLIC_STORE_CONTRACT as `0x${string}`;
+const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`;
 const MIN_BALANCE = 1000; // $1000 USDC
-const RPC_URL = process.env.RPC_URL || 'https://rpc.sophon.xyz';
+const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
 
 export async function OPTIONS(request: NextRequest) {
     return new NextResponse(null, { status: 200, headers: corsHeaders() });
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   
   try {
     const publicClient = createPublicClient({
-      chain: sophon,
+      chain: sophonTestnet,
       transport: http(RPC_URL)
     });
 
