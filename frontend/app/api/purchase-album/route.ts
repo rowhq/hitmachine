@@ -8,19 +8,18 @@ import {
 import { sophon } from 'viem/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/storeV2.json';
-import { handleCors } from '../cors';
+import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
 const RPC_URL = process.env.RPC_URL || 'https://rpc.sophon.xyz';
 const STORE_CONTRACT = process.env.NEXT_PUBLIC_STORE_CONTRACT || "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5";
 
 export async function OPTIONS(request: NextRequest) {
-    const corsHeaders = handleCors(request);
-    return new NextResponse(null, { status: 200, headers: corsHeaders });
+    return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
 
 export async function GET(request: NextRequest) {
-    const corsHeaders = handleCors(request);
+    const headers = corsHeaders();
     
     try {
         const searchParams = request.nextUrl.searchParams;
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
         if (!address) {
             return NextResponse.json(
                 { error: 'Address parameter is required' },
-                { status: 400, headers: corsHeaders }
+                { status: 400, headers }
             );
         }
         
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
         if (isNaN(index) || index < 0) {
             return NextResponse.json(
                 { error: 'Index must be a non-negative integer' },
-                { status: 400, headers: corsHeaders }
+                { status: 400, headers }
             );
         }
 
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
         if (index > Number(maxIndex)) {
             return NextResponse.json(
                 { error: `Index out of bounds: max is ${maxIndex}` },
-                { status: 400, headers: corsHeaders }
+                { status: 400, headers }
             );
         }
 
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest) {
         if (hasPurchased) {
             return NextResponse.json(
                 { error: 'Album already purchased' },
-                { status: 400, headers: corsHeaders }
+                { status: 400, headers }
             );
         }
 
@@ -101,7 +100,7 @@ export async function GET(request: NextRequest) {
                 txHashes: {
                     purchase: purchaseTx,
                 },
-            }, { headers: corsHeaders });
+            }, { headers });
         } catch (simulationError: any) {
             console.error('Transaction simulation failed:', simulationError);
             
@@ -112,14 +111,14 @@ export async function GET(request: NextRequest) {
                     details: simulationError.message || 'Simulation failed',
                     reason: simulationError.cause?.reason || simulationError.cause?.message
                 },
-                { status: 400, headers: corsHeaders }
+                { status: 400, headers }
             );
         }
     } catch (err: any) {
         console.error(err);
         return NextResponse.json(
             { error: err.message || 'Unexpected error' },
-            { status: 500, headers: corsHeaders }
+            { status: 500, headers }
         );
     }
 }

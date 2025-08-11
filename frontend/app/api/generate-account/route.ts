@@ -10,7 +10,7 @@ import { erc20Abi } from 'viem';
 import { sophon } from 'viem/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/storeV2.json';
-import { handleCors } from '../cors';
+import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
 const USDC_ADDRESS = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F';
@@ -20,12 +20,11 @@ const COINGECKO_URL =
     'https://api.coingecko.com/api/v3/simple/price?ids=sophon&vs_currencies=usd';
 
 export async function OPTIONS(request: NextRequest) {
-    const corsHeaders = handleCors(request);
-    return new NextResponse(null, { status: 200, headers: corsHeaders });
+    return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
 
 export async function POST(request: NextRequest) {
-    const corsHeaders = handleCors(request);
+    const headers = corsHeaders();
     
     try {
         const index = await kv.get('wallet_index') || 0;
@@ -157,12 +156,12 @@ export async function POST(request: NextRequest) {
             txHashes: { usdc: usdcTxHash, soph: nativeTxHash, approveTxHash: approveTxHash },
             sophSent: amountSOPH,
             priceUsd: sophPriceUsd
-        }, { headers: corsHeaders });
+        }, { headers });
     } catch (err: any) {
         console.error(err);
         return NextResponse.json(
             { error: err.message || 'Unexpected error' },
-            { status: 500, headers: corsHeaders }
+            { status: 500, headers }
         );
     }
 }

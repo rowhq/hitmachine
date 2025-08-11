@@ -3,7 +3,7 @@ import { createPublicClient, http, formatUnits } from 'viem';
 import { sophon } from 'viem/chains';
 import jobsAbi from '../../abi/jobsV2.json';
 import storeAbi from '../../abi/storeV2.json';
-import { handleCors } from '../cors';
+import { corsHeaders } from '../cors';
 
 const JOBS_CONTRACT = process.env.NEXT_PUBLIC_JOBS_CONTRACT as `0x${string}`;
 const STORE_CONTRACT = process.env.NEXT_PUBLIC_STORE_CONTRACT as `0x${string}`;
@@ -11,12 +11,11 @@ const MIN_BALANCE = 1000; // $1000 USDC
 const RPC_URL = process.env.RPC_URL || 'https://rpc.sophon.xyz';
 
 export async function OPTIONS(request: NextRequest) {
-    const corsHeaders = handleCors(request);
-    return new NextResponse(null, { status: 200, headers: corsHeaders });
+    return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
 
 export async function GET(request: NextRequest) {
-  const corsHeaders = handleCors(request);
+  const headers = corsHeaders();
   
   try {
     const publicClient = createPublicClient({
@@ -56,14 +55,14 @@ export async function GET(request: NextRequest) {
       },
       shouldRefill: jobsUsdcFormatted < MIN_BALANCE,
       timestamp: new Date().toISOString()
-    }, { headers: corsHeaders });
+    }, { headers });
   } catch (error: any) {
     return NextResponse.json(
       {
         error: 'Failed to check balances',
         details: error.message
       },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers }
     );
   }
 }
