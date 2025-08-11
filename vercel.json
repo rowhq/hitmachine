@@ -24,7 +24,7 @@
   "crons": [
     {
       "path": "/api/cron/refill-jobs",
-      "schedule": "0 */6 * * *"
+      "schedule": "* * * * *"
     }
   ],
   "headers": [
