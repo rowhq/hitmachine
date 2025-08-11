@@ -14,15 +14,6 @@ interface IStore {
     function getContractBalance() external view returns (uint256);
 }
 
-interface IRateLimiter {
-    function checkAndUpdateLimits(
-        bytes32 ipHash,
-        address wallet,
-        uint256 usdcAmount,
-        uint256 nativeAmount
-    ) external returns (bool allowed, string memory reason);
-}
-
 contract JobsV2 is 
     Initializable,
     AccessControlUpgradeable,
@@ -37,7 +28,6 @@ contract JobsV2 is
     IERC20 public usdc;
     IERC20 public nativeToken; // SOPH token
     IStore public storeContract;
-    IRateLimiter public rateLimiter;
     
     uint256 public totalUsdcDistributed;
     uint256 public totalNativeDistributed;
@@ -117,29 +107,6 @@ contract JobsV2 is
         totalClaimedFromStore += claimed;
         
         emit ClaimedFromStore(claimed, block.timestamp);
-    }
-    
-    function payUserWithRateLimit(
-        address user,
-        uint256 usdcAmount,
-        uint256 nativeAmount,
-        bytes32 ipHash
-    ) external nonReentrant whenNotPaused onlyRole(DISTRIBUTOR_ROLE) {
-        require(user != address(0), "Invalid user address");
-        require(usdcAmount > 0 || nativeAmount > 0, "Must pay with at least one token");
-        
-        // Check rate limits if rate limiter is set
-        if (address(rateLimiter) != address(0)) {
-            (bool allowed, string memory reason) = rateLimiter.checkAndUpdateLimits(
-                ipHash,
-                user,
-                usdcAmount,
-                nativeAmount
-            );
-            require(allowed, reason);
-        }
-        
-        _payUser(user, usdcAmount, nativeAmount);
     }
     
     function payUser(

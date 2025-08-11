@@ -4,8 +4,7 @@
 ```
 src/
 ├── StoreV2.sol         # Album purchase contract with AccessControl
-├── JobsV2.sol          # Fund distribution with Store integration  
-└── RateLimiter.sol     # On-chain rate limiting contract
+└── JobsV2.sol          # Fund distribution with Store integration
 ```
 
 ## API Endpoints

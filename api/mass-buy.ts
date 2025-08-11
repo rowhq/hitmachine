@@ -108,22 +108,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         // Approve if needed
         if (allowance < parseUnits('0.01', 6)) {
-          const approveTx = await client.writeContract({
+          // Simulate approve first
+          const { request: approveRequest } = await publicClient.simulateContract({
             address: USDC_ADDRESS,
             abi: erc20Abi,
             functionName: 'approve',
-            args: [STORE_CONTRACT, parseUnits('0.01', 6)]
+            args: [STORE_CONTRACT, parseUnits('0.01', 6)],
+            account: account.address,
           });
+          const approveTx = await client.writeContract(approveRequest);
           await publicClient.waitForTransactionReceipt({ hash: approveTx });
         }
         
-        // Execute purchase
-        const buyTx = await client.writeContract({
+        // Simulate and execute purchase
+        const { request: buyRequest } = await publicClient.simulateContract({
           address: STORE_CONTRACT,
           abi: storeAbi,
           functionName: 'buyAlbum',
-          args: []
+          args: [],
+          account: account.address,
         });
+        const buyTx = await client.writeContract(buyRequest);
         
         await publicClient.waitForTransactionReceipt({ hash: buyTx });
         
@@ -168,12 +173,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Send back to NANO wallet
           const nanoWallet = (await import('viem/accounts')).privateKeyToAccount(`0x${ADMIN_WALLET}`);
           
-          const refundTx = await client.writeContract({
+          // Simulate and execute refund
+          const { request: refundRequest } = await publicClient.simulateContract({
             address: USDC_ADDRESS,
             abi: erc20Abi,
             functionName: 'transfer',
-            args: [nanoWallet.address, remainingUsdc]
+            args: [nanoWallet.address, remainingUsdc],
+            account: account.address,
           });
+          const refundTx = await client.writeContract(refundRequest);
           
           await publicClient.waitForTransactionReceipt({ hash: refundTx });
           
