@@ -6,6 +6,7 @@ import StoreContract from './components/StoreContract';
 import JobsContract from './components/JobsContract';
 import GenerateWallet from './components/GenerateWallet';
 import ContractStats from './components/ContractStats';
+import MintTestUSDC from './components/MintTestUSDC';
 
 export default function Home() {
   const { isConnected } = useAccount();
@@ -20,6 +21,13 @@ export default function Home() {
 
         {/* Stats Overview */}
         <ContractStats />
+
+        {/* Testnet Tools (only shows on testnet) */}
+        {isConnected && (
+          <div className="mt-8">
+            <MintTestUSDC />
+          </div>
+        )}
 
         {/* Generate Wallet Section */}
         <div className="mt-8">

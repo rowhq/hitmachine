@@ -6,10 +6,13 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { defineChain } from 'viem';
 
-// Define Sophon chain
-const sophon = defineChain({
+// Import testnet config
+import { sophonTestnet } from './config/chains';
+
+// Use mainnet for production, testnet for development
+const sophonMainnet = defineChain({
   id: 50104,
-  name: 'Sophon',
+  name: 'Sophon Mainnet',
   nativeCurrency: {
     decimals: 18,
     name: 'Sophon',
@@ -25,10 +28,14 @@ const sophon = defineChain({
   },
 });
 
+// Use testnet by default, can switch to mainnet in production
+const isMainnet = process.env.NEXT_PUBLIC_NETWORK === 'mainnet';
+const activeChain = isMainnet ? sophonMainnet : sophonTestnet;
+
 const config = getDefaultConfig({
-  appName: 'HitMachine Admin',
+  appName: 'HitMachine',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains: [sophon],
+  chains: [activeChain],
   ssr: true,
 });
 
