@@ -9,10 +9,18 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}🚀 Deploying to Sophon Testnet${NC}"
 echo "========================================"
 
+# Load environment variables from .env if it exists
+if [ -f ".env" ]; then
+    echo -e "${YELLOW}📋 Loading from .env file...${NC}"
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
 # Check if WALLET_PRIVATE_KEY is set
 if [ -z "$WALLET_PRIVATE_KEY" ]; then
     echo -e "${RED}❌ Error: WALLET_PRIVATE_KEY environment variable not set${NC}"
-    echo "Please set your private key: export WALLET_PRIVATE_KEY=0x..."
+    echo -e "${YELLOW}Please either:${NC}"
+    echo "  1. Set in .env file: WALLET_PRIVATE_KEY=0x..."
+    echo "  2. Export directly: export WALLET_PRIVATE_KEY=0x..."
     exit 1
 fi
 

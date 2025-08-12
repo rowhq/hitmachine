@@ -27,11 +27,16 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
-# Step 2: Check environment
+# Step 2: Load environment variables
+echo -e "${YELLOW}📋 Loading environment variables...${NC}"
+source ./scripts/load-env.sh
+
+# Check if WALLET_PRIVATE_KEY is set
 if [ -z "$WALLET_PRIVATE_KEY" ]; then
     echo -e "${RED}❌ WALLET_PRIVATE_KEY not set${NC}"
-    echo -e "${YELLOW}Please set your deployer private key:${NC}"
-    echo -e "  export WALLET_PRIVATE_KEY=0x..."
+    echo -e "${YELLOW}Please either:${NC}"
+    echo -e "  1. Set in .env file: WALLET_PRIVATE_KEY=0x..."
+    echo -e "  2. Export directly: export WALLET_PRIVATE_KEY=0x..."
     exit 1
 fi
 
