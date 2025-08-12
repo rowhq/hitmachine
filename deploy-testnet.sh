@@ -9,12 +9,15 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}🚀 Deploying to Sophon Testnet${NC}"
 echo "========================================"
 
-# Check if PRIVATE_KEY is set
-if [ -z "$PRIVATE_KEY" ]; then
-    echo -e "${RED}❌ Error: PRIVATE_KEY environment variable not set${NC}"
-    echo "Please set your private key: export PRIVATE_KEY=0x..."
+# Check if WALLET_PRIVATE_KEY is set
+if [ -z "$WALLET_PRIVATE_KEY" ]; then
+    echo -e "${RED}❌ Error: WALLET_PRIVATE_KEY environment variable not set${NC}"
+    echo "Please set your private key: export WALLET_PRIVATE_KEY=0x..."
     exit 1
 fi
+
+# Use WALLET_PRIVATE_KEY for deployment
+export PRIVATE_KEY=$WALLET_PRIVATE_KEY
 
 # Set RPC URL for Sophon Testnet
 export RPC_URL="https://rpc.testnet.sophon.xyz"

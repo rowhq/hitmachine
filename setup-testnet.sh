@@ -28,12 +28,15 @@ if ! command -v jq &> /dev/null; then
 fi
 
 # Step 2: Check environment
-if [ -z "$PRIVATE_KEY" ]; then
-    echo -e "${RED}❌ PRIVATE_KEY not set${NC}"
+if [ -z "$WALLET_PRIVATE_KEY" ]; then
+    echo -e "${RED}❌ WALLET_PRIVATE_KEY not set${NC}"
     echo -e "${YELLOW}Please set your deployer private key:${NC}"
-    echo -e "  export PRIVATE_KEY=0x..."
+    echo -e "  export WALLET_PRIVATE_KEY=0x..."
     exit 1
 fi
+
+# Use WALLET_PRIVATE_KEY for deployment
+export PRIVATE_KEY=$WALLET_PRIVATE_KEY
 
 echo -e "${GREEN}✅ Prerequisites checked${NC}"
 echo ""
@@ -98,8 +101,7 @@ NEXT_PUBLIC_USDC_ADDRESS=$MOCK_USDC
 RPC_URL=https://rpc.testnet.sophon.xyz
 
 # Wallet configuration (update these!)
-PRIVATE_KEY=$PRIVATE_KEY
-WALLET_PRIVATE_KEY=$PRIVATE_KEY
+WALLET_PRIVATE_KEY=$WALLET_PRIVATE_KEY
 MNEMONIC=your_twelve_word_mnemonic_phrase_here
 
 # Vercel KV (get from vercel.com/storage)

@@ -1,9 +1,4 @@
 {
-  "rootDirectory": "frontend",
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
   "functions": {
     "app/api/generate-account/route.ts": {
       "maxDuration": 10
