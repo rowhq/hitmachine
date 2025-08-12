@@ -23,8 +23,10 @@ load_env() {
     return 0
 }
 
-# Load from .env file
-if load_env ".env"; then
+# Load from .env.local file (priority order)
+if load_env ".env.local"; then
+    echo "✅ Loaded environment from .env.local"
+elif load_env ".env"; then
     echo "✅ Loaded environment from .env"
 elif load_env "frontend/.env.local"; then
     echo "✅ Loaded environment from frontend/.env.local"
