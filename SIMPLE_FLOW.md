@@ -15,54 +15,45 @@
 ## Simple Flow Diagram
 
 ```mermaid
-graph TB
-    %% Main entities
-    subgraph "Nano LLC (Referral Company)"
-        NANO["🏢 Nano Wallet"]
-        JOBS["📋 Jobs Contract<br/>Pays Workers"]
+flowchart TB
+    subgraph NanoCompany[Nano LLC - Referral Company]
+        NanoWallet[Nano Wallet]
+        JobsContract[Jobs Contract]
     end
     
-    subgraph "Album Sales LLC"
-        STORE["🏪 Store Contract<br/>Sells Albums"]
+    subgraph AlbumCompany[Album Sales LLC]
+        StoreContract[Store Contract]
     end
     
-    USER["👤 User/Worker<br/>(Receives 32 USDC)"]
+    Worker[Worker/User]
     
-    %% The circular flow
-    NANO ==>|"1. Initial funding<br/>💰 32 USDC<br/>(one-time)"| JOBS
-    NANO -->|"2. payForJob(worker)"| JOBS
-    JOBS ==>|"3. Transfers<br/>💰 32 USDC"| USER
-    USER ==>|"4. buyAlbums()<br/>💰 32 USDC"| STORE
-    STORE -.->|"5. Revenue sits<br/>in Store"| STORE
-    NANO ==>|"6. claimReferralCommissions<br/>(jobs_address, 32)"| STORE
-    STORE ==>|"7. Sends commission<br/>💰 32 USDC"| JOBS
-    JOBS -.->|"8. Ready to pay<br/>next worker<br/>♻️ CYCLE CONTINUES"| NANO
+    NanoWallet -->|1. Initial 32 USDC funding| JobsContract
+    NanoWallet -->|2. payForJob| JobsContract
+    JobsContract -->|3. Pays 32 USDC| Worker
+    Worker -->|4. buyAlbums 32 USDC| StoreContract
+    StoreContract -.->|5. Revenue accumulates| StoreContract
+    NanoWallet -->|6. claimReferralCommissions| StoreContract
+    StoreContract -->|7. Sends 32 USDC| JobsContract
+    JobsContract -.->|8. Ready for next cycle| NanoWallet
     
-    %% Highlight the circular path
-    JOBS -.->|"♻️"| NANO
-    
-    %% Styling
-    style NANO fill:#ffebee,stroke:#c62828,stroke-width:3px
-    style JOBS fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
-    style USER fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    style STORE fill:#f3e5f5,stroke:#6a1b9a,stroke-width:3px
-    
-    classDef nanoClass fill:#ffebee,stroke:#c62828,stroke-width:3px
-    classDef storeClass fill:#f3e5f5,stroke:#6a1b9a,stroke-width:3px
+    style NanoWallet fill:#ffebee
+    style JobsContract fill:#e3f2fd
+    style Worker fill:#fff3e0
+    style StoreContract fill:#f3e5f5
 ```
 
 ## How It Works
 
 ### 1️⃣ **Bootstrap** (One-time)
-- Nano company funds Jobs contract with initial USDC
-- This provides starting capital for user acquisition
+* Nano company funds Jobs contract with initial USDC
+* This provides starting capital for user acquisition
 
 ### 2️⃣ **User Acquisition**
 ```solidity
 Jobs.payForJob(workerAddress)
 ```
-- Nano calls this to pay workers 32 USDC
-- Workers create and fund user wallets
+* Nano calls this to pay workers 32 USDC
+* Workers create and fund user wallets
 
 ### 3️⃣ **Album Purchase**
 ```solidity
@@ -76,9 +67,9 @@ Store.buyAlbums()
 ```solidity
 Store.claimReferralCommissions(jobsAddress, amount)
 ```
-- Nano claims earned commissions from Store
-- Directs them to Jobs contract
-- Jobs contract now has funds for more workers
+* Nano claims earned commissions from Store
+* Directs them to Jobs contract
+* Jobs contract now has funds for more workers
 
 ### 5️⃣ **Cycle Continues** ♻️
 
