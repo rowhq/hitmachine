@@ -38,7 +38,7 @@ HitMachine is a self-sustaining referral and album purchase system built on the 
 ### 1. **Store Contract** (`StoreV2.sol`)
 - **Purpose**: Handles album sales and commission distribution
 - **Key Functions**:
-  - `buyAlbum()` - Users purchase albums
+  - `buyAlbums()` - Users purchase albums (4 albums for 32 USDC)
   - `claimReferralCommissions()` - Nano wallet claims commissions
   - `claimAllReferralCommissions()` - Nano wallet claims all available commissions
 - **Revenue Flow**: Collects USDC from album sales → Nano claims as commissions
@@ -60,9 +60,9 @@ graph TB
     
     subgraph "Operational Cycle"
         N2[Nano Wallet] -->|1. payForJob| J2[Jobs Contract]
-        J2 -->|2. USDC + SOPH Payment| W[Worker]
-        W -->|3. Creates & Funds Wallet| U[User Wallet]
-        U -->|4. buyAlbum 0.01 USDC| S[Store Contract]
+        J2 -->|2. USDC Payment| W[Worker]
+        W -->|3. Creates and Funds Wallet| U[User Wallet]
+        U -->|4. buyAlbums 32 USDC| S[Store Contract]
         S -->|5. Accumulates Revenue| S
         N3[Nano Wallet] -->|6. claimReferralCommissions| S
         S -->|7. Sends USDC Commissions| J3[Jobs Contract]
