@@ -2,15 +2,17 @@
 
 ## Legal Entities
 
-### Nano LLC (Referral Marketing Company)
+### Nano LLC (Wyoming - Referral Marketing Company)
 * Owns: Jobs Contract
 * Business: User acquisition and referral marketing
 * Revenue: Earns commissions from Album Sales LLC
+* Jurisdiction: Wyoming LLC
 
-### Album Sales LLC (E-commerce Company)
+### Album Sales LLC (Wyoming - E-commerce Company)
 * Owns: Store Contract  
 * Business: Sells digital albums
 * Obligation: Pays referral commissions to Nano LLC per agreement
+* Jurisdiction: Wyoming LLC
 
 ## Simple Flow Diagram
 

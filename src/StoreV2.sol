@@ -23,13 +23,22 @@ contract StoreV2 is
     uint256 public totalPurchases;
     uint256 public totalRevenue;
     
-    // Expected standard purchase amount (32 USDC = 3200 albums)
+    // Expected standard purchase amount (32 USDC = 4 albums @ $8 each)
     uint256 public constant EXPECTED_PURCHASE_AMOUNT = 32 * 10**6; // 32 USDC
+    
+    // Promotional Commission Structure (tiered based on total commissions claimed)
+    // First $50M in sales: 100% commission to Nano LLC
+    // Next $10M: 90% commission  
+    // Next $10M: 80% commission, decreasing by 10% each $10M
+    // Eventually reaches 0% after $140M total claimed
+    uint256 public constant PROMO_TIER_SIZE = 10_000_000 * 10**6; // $10M USDC
+    uint256 public constant PROMO_FIRST_TIER = 50_000_000 * 10**6; // $50M USDC at 100%
+    uint256 public totalCommissionsClaimed;
 
     event AlbumPurchased(address indexed buyer, uint256 price);
     event PriceUpdated(uint256 oldPrice, uint256 newPrice);
     event FundsWithdrawn(address indexed to, uint256 amount);
-    event ReferralCommissionsClaimed(address indexed claimedBy, address indexed sentTo, uint256 amount);
+    event ReferralCommissionsClaimed(address indexed claimedBy, address indexed sentTo, uint256 amount, uint256 commissionRate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -96,23 +105,56 @@ contract StoreV2 is
         emit FundsWithdrawn(to, amount);
     }
 
-    // Nano wallet claims referral commissions and directs where to send them
+    // Calculate current commission rate based on promotional tier system
+    function getCurrentCommissionRate() public view returns (uint256) {
+        if (totalCommissionsClaimed < PROMO_FIRST_TIER) {
+            return 100; // 100% commission for first $50M
+        }
+        
+        uint256 excessClaimed = totalCommissionsClaimed - PROMO_FIRST_TIER;
+        uint256 tiersPassed = excessClaimed / PROMO_TIER_SIZE;
+        
+        if (tiersPassed >= 9) {
+            return 0; // 0% commission after $140M total claimed
+        }
+        
+        // Each tier reduces commission by 10%
+        return 90 - (tiersPassed * 10);
+    }
+    
+    // Calculate claimable commission amount based on current tier
+    function getClaimableCommission() public view returns (uint256) {
+        uint256 balance = usdc.balanceOf(address(this));
+        uint256 rate = getCurrentCommissionRate();
+        return (balance * rate) / 100;
+    }
+    
+    // Nano wallet claims referral commissions per the promotional agreement
     function claimReferralCommissions(address destination, uint256 amount) external onlyRole(COMMISSION_CLAIMER_ROLE) {
         require(destination != address(0), "Invalid destination");
         require(amount > 0, "Amount must be greater than 0");
+        
+        uint256 claimable = getClaimableCommission();
+        require(amount <= claimable, "Amount exceeds claimable commission per agreement");
         require(amount <= usdc.balanceOf(address(this)), "Insufficient balance");
 
+        totalCommissionsClaimed += amount;
+        uint256 rate = getCurrentCommissionRate();
+        
         require(usdc.transfer(destination, amount), "Commission transfer failed");
-        emit ReferralCommissionsClaimed(msg.sender, destination, amount);
+        emit ReferralCommissionsClaimed(msg.sender, destination, amount, rate);
     }
 
     function claimAllReferralCommissions(address destination) external onlyRole(COMMISSION_CLAIMER_ROLE) {
-        uint256 balance = usdc.balanceOf(address(this));
-        require(balance > 0, "No commissions to claim");
+        uint256 claimable = getClaimableCommission();
+        require(claimable > 0, "No commissions to claim at current tier");
         require(destination != address(0), "Invalid destination");
 
-        require(usdc.transfer(destination, balance), "Commission transfer failed");
-        emit ReferralCommissionsClaimed(msg.sender, destination, balance);
+        totalCommissionsClaimed += claimable;
+        uint256 rate = getCurrentCommissionRate();
+        
+        require(usdc.transfer(destination, claimable), "Commission transfer failed");
+        emit ReferralCommissionsClaimed(msg.sender, destination, claimable, rate);
     }
 
     function withdrawAll(address to) external onlyRole(WITHDRAWER_ROLE) {
