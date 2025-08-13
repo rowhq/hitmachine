@@ -1,36 +1,14 @@
 {
   "name": "hitmachine",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Blockchain-based album purchase system on Sophon network",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "forge build",
+    "test": "forge test",
+    "extract-abis": "./scripts/extract-abis.sh",
+    "deploy:testnet": "./deploy-testnet.sh"
   },
-  "keywords": [],
+  "keywords": ["blockchain", "sophon", "foundry", "solidity"],
   "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@matterlabs/hardhat-zksync": "^1.6.1",
-    "@matterlabs/zksync-contracts": "1.0.0-alpha.9",
-    "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
-    "@nomicfoundation/hardhat-verify": "^2.0.13",
-    "@openzeppelin/contracts": "^5.3.0",
-    "@types/chai": "^5.2.2",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^24.0.10",
-    "chai": "^4.5.0",
-    "dotenv": "^16.5.0",
-    "ethers": "^6.14.0",
-    "hardhat": "^2.24.0",
-    "mocha": "^11.2.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
-    "zksync-ethers": "^6.17.0"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.54.0",
-    "@vercel/kv": "^3.0.0",
-    "@vercel/node": "^5.3.2",
-    "viem": "^2.31.7"
-  }
+  "license": "MIT"
 }
