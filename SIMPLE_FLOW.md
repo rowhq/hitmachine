@@ -20,7 +20,7 @@
 flowchart TB
     subgraph NanoCompany[Nano LLC Referral Company]
         NanoWallet[Nano Wallet]
-        JobsContract[Jobs Contract]
+        JobsContract[Jobs Contract Pre-Funded]
     end
     
     subgraph AlbumCompany[Album Sales LLC]
@@ -29,14 +29,13 @@ flowchart TB
     
     Worker[Worker User]
     
-    NanoWallet -->|Step 1 Initial 32 USDC funding| JobsContract
-    NanoWallet -->|Step 2 payForJob| JobsContract
-    JobsContract -->|Step 3 Pays 32 USDC| Worker
-    Worker -->|Step 4 buyAlbums 32 USDC| StoreContract
-    StoreContract -.->|Step 5 Revenue accumulates| StoreContract
-    NanoWallet -->|Step 6 claimReferralCommissions| StoreContract
-    StoreContract -->|Step 7 Sends 32 USDC| JobsContract
-    JobsContract -.->|Step 8 Ready for next cycle| NanoWallet
+    NanoWallet -->|Step 1 payForJob| JobsContract
+    JobsContract -->|Step 2 Transfers 32 USDC| Worker
+    Worker -->|Step 3 buyAlbums 32 USDC| StoreContract
+    StoreContract -.->|Step 4 Revenue accumulates| StoreContract
+    NanoWallet -->|Step 5 claimReferralCommissions to Jobs address| StoreContract
+    StoreContract -->|Step 6 Commission sent to Jobs| JobsContract
+    JobsContract -.->|Cycle continues| NanoWallet
     
     style NanoWallet fill:#ffebee
     style JobsContract fill:#e3f2fd
