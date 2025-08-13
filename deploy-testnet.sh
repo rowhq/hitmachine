@@ -97,6 +97,8 @@ STORE_INIT_DATA=$(cast calldata "initialize(address,address,uint256)" $MOCK_USDC
 
 # Deploy Store proxy
 echo "Deploying Store proxy..."
+echo "Store implementation: $STORE_IMPL"
+echo "Init data: $STORE_INIT_DATA"
 STORE_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
     --constructor-args $STORE_IMPL $STORE_INIT_DATA \
     --rpc-url $RPC_URL \
@@ -104,6 +106,7 @@ STORE_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
+    --legacy \
     2>&1)
 
 STORE_PROXY=$(echo "$STORE_PROXY_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
@@ -121,6 +124,8 @@ JOBS_INIT_DATA=$(cast calldata "initialize(address,address)" $MOCK_USDC $DEPLOYE
 
 # Deploy Jobs proxy
 echo "Deploying Jobs proxy..."
+echo "Jobs implementation: $JOBS_IMPL"
+echo "Init data: $JOBS_INIT_DATA"
 JOBS_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
     --constructor-args $JOBS_IMPL $JOBS_INIT_DATA \
     --rpc-url $RPC_URL \
@@ -128,6 +133,7 @@ JOBS_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
+    --legacy \
     2>&1)
 
 JOBS_PROXY=$(echo "$JOBS_PROXY_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
