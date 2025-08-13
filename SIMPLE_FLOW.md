@@ -18,28 +18,28 @@
 
 ```mermaid
 flowchart TB
-    subgraph NanoCompany[Nano LLC Referral Company]
+    subgraph NanoLLC[Nano LLC - Referral Company]
         NanoWallet[Nano Wallet]
-        JobsContract[Jobs Contract Pre-Funded]
+        JobsContract[Jobs Contract]
     end
     
-    subgraph AlbumCompany[Album Sales LLC]
+    subgraph AlbumSalesLLC[Album Sales LLC]
         StoreContract[Store Contract]
     end
     
-    Worker[Worker User]
+    Worker[Worker]
     
-    NanoWallet -->|Step 1 payForJob| JobsContract
-    JobsContract -->|Step 2 Transfers 32 USDC| Worker
-    Worker -->|Step 3 buyAlbums 32 USDC| StoreContract
-    StoreContract -.->|Step 4 Revenue accumulates| StoreContract
-    NanoWallet ==>|Step 5 calls claimReferralCommissions| StoreContract
-    StoreContract ==>|Sends commission to Jobs per Nano instruction| JobsContract
+    NanoWallet -->|1. payForJob worker| JobsContract
+    JobsContract -->|2. Pays 32 USDC| Worker
+    Worker -->|3. buyAlbums with 32 USDC| StoreContract
+    NanoWallet ==>|4. claimReferralCommissions jobsAddress 32 USDC| StoreContract
+    StoreContract ==>|Transfers commission to Jobs| JobsContract
+    JobsContract -.->|Ready for next worker| JobsContract
     
-    style NanoWallet fill:#ffebee
-    style JobsContract fill:#e3f2fd
-    style Worker fill:#fff3e0
-    style StoreContract fill:#f3e5f5
+    style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style Worker fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style StoreContract fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
 ```
 
 ## How It Works
