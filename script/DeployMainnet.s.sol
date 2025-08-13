@@ -53,11 +53,12 @@ contract DeployMainnetScript is Script, TestExt {
         console.log("Store Proxy:", address(_storeProxy));
         console.log("Store Implementation:", address(storeImpl));
         console.log("Admin:", deployer);
-        console.log("Initial Album Price: 0.01 USDC");
+        console.log("Initial Album Price: 32 USDC");
         console.log("========================================");
-        console.log("\nUpdate your frontend/.env with:");
-        console.log("NEXT_PUBLIC_STORE_CONTRACT=", address(_storeProxy));
-        console.log("NEXT_PUBLIC_USDC_ADDRESS=", usdcAddress);
+        console.log("\nFrontend configuration:");
+        console.log("[SUCCESS] Auto-updated frontend/.env.local with:");
+        console.log("  NEXT_PUBLIC_STORE_CONTRACT=", address(_storeProxy));
+        console.log("  NEXT_PUBLIC_USDC_ADDRESS=", usdcAddress);
         console.log("========================================");
 
         // Save deployment info to file
@@ -77,6 +78,19 @@ contract DeployMainnetScript is Script, TestExt {
             "\n"
         );
         vm.writeFile("deployed-addresses-mainnet.txt", deploymentInfo);
+        
+        // Write frontend env file
+        string memory frontendEnv = string.concat(
+            "# Auto-generated from DeployMainnet.s.sol\n",
+            "NEXT_PUBLIC_STORE_CONTRACT=",
+            vm.toString(address(_storeProxy)),
+            "\n",
+            "NEXT_PUBLIC_USDC_ADDRESS=",
+            vm.toString(usdcAddress),
+            "\n",
+            "NEXT_PUBLIC_NETWORK=mainnet\n"
+        );
+        vm.writeFile("frontend/.env.local", frontendEnv);
 
         return address(_storeProxy);
     }
