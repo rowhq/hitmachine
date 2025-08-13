@@ -29,14 +29,14 @@ flowchart TB
     
     Worker[Worker User]
     
-    NanoWallet -->|1. Initial 32 USDC funding| JobsContract
-    NanoWallet -->|2. payForJob| JobsContract
-    JobsContract -->|3. Pays 32 USDC| Worker
-    Worker -->|4. buyAlbums 32 USDC| StoreContract
-    StoreContract -.->|5. Revenue accumulates| StoreContract
-    NanoWallet -->|6. claimReferralCommissions| StoreContract
-    StoreContract -->|7. Sends 32 USDC| JobsContract
-    JobsContract -.->|8. Ready for next cycle| NanoWallet
+    NanoWallet -->|Step 1 Initial 32 USDC funding| JobsContract
+    NanoWallet -->|Step 2 payForJob| JobsContract
+    JobsContract -->|Step 3 Pays 32 USDC| Worker
+    Worker -->|Step 4 buyAlbums 32 USDC| StoreContract
+    StoreContract -.->|Step 5 Revenue accumulates| StoreContract
+    NanoWallet -->|Step 6 claimReferralCommissions| StoreContract
+    StoreContract -->|Step 7 Sends 32 USDC| JobsContract
+    JobsContract -.->|Step 8 Ready for next cycle| NanoWallet
     
     style NanoWallet fill:#ffebee
     style JobsContract fill:#e3f2fd
