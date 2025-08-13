@@ -35,7 +35,6 @@ flowchart TB
     StoreContract -.->|Step 4 Revenue accumulates| StoreContract
     NanoWallet ==>|Step 5 calls claimReferralCommissions| StoreContract
     StoreContract ==>|Sends commission to Jobs per Nano instruction| JobsContract
-    JobsContract -.->|Cycle continues| NanoWallet
     
     style NanoWallet fill:#ffebee
     style JobsContract fill:#e3f2fd
