@@ -35,10 +35,15 @@ USDC_OUTPUT=$(forge create src/MockUSDC.sol:MockUSDC \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --legacy \
-    --json)
+    --legacy 2>&1)
 
-USDC_ADDRESS=$(echo "$USDC_OUTPUT" | jq -r '.deployedTo')
+# Extract deployed address from output
+USDC_ADDRESS=$(echo "$USDC_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
+if [ -z "$USDC_ADDRESS" ]; then
+    echo -e "${RED}Failed to deploy MockUSDC${NC}"
+    echo "$USDC_OUTPUT"
+    exit 1
+fi
 echo "MockUSDC deployed at: $USDC_ADDRESS"
 
 # Deploy Store implementation
@@ -49,10 +54,14 @@ STORE_IMPL_OUTPUT=$(forge create src/StoreV2.sol:StoreV2 \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --legacy \
-    --json)
+    --legacy 2>&1)
 
-STORE_IMPL=$(echo "$STORE_IMPL_OUTPUT" | jq -r '.deployedTo')
+STORE_IMPL=$(echo "$STORE_IMPL_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
+if [ -z "$STORE_IMPL" ]; then
+    echo -e "${RED}Failed to deploy Store implementation${NC}"
+    echo "$STORE_IMPL_OUTPUT"
+    exit 1
+fi
 echo "Store implementation deployed at: $STORE_IMPL"
 
 # Encode initialization data for Store proxy
@@ -68,18 +77,29 @@ STORE_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
     --constructor-args $STORE_IMPL $STORE_INIT_DATA \
-    --legacy \
-    --json)
+    --legacy 2>&1)
 
-STORE_PROXY=$(echo "$STORE_PROXY_OUTPUT" | jq -r '.deployedTo')
+STORE_PROXY=$(echo "$STORE_PROXY_OUTPUT" | grep "Deployed to:" | awk '{print $3}')
+if [ -z "$STORE_PROXY" ]; then
+    echo -e "${RED}Failed to deploy Store proxy${NC}"
+    echo "$STORE_PROXY_OUTPUT"
+    exit 1
+fi
 echo "Store proxy deployed at: $STORE_PROXY"
 
-# Mint initial USDC to deployer
-echo -e "${GREEN}5. Minting initial USDC to deployer...${NC}"
+# Mint initial USDC to deployer and Store
+echo -e "${GREEN}5. Minting initial USDC...${NC}"
+echo "Minting 10,000 USDC to deployer..."
 cast send $USDC_ADDRESS "mintTo(address,uint256)" $DEPLOYER_ADDRESS 10000000000 \
     --rpc-url sophonTestnet \
     --private-key $WALLET_PRIVATE_KEY \
-    --legacy
+    --legacy > /dev/null
+
+echo "Minting 1,000 USDC to Store contract..."
+cast send $USDC_ADDRESS "mintTo(address,uint256)" $STORE_PROXY 1000000000 \
+    --rpc-url sophonTestnet \
+    --private-key $WALLET_PRIVATE_KEY \
+    --legacy > /dev/null
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}TESTNET DEPLOYMENT COMPLETE${NC}"
@@ -89,6 +109,8 @@ echo "Store Proxy: $STORE_PROXY"
 echo "Store Implementation: $STORE_IMPL"
 echo "Admin: $DEPLOYER_ADDRESS"
 echo "Initial Album Price: 32 USDC"
+echo "Store funded with: 1,000 USDC"
+echo "Deployer funded with: 10,000 USDC"
 echo -e "${GREEN}========================================${NC}"
 
 # Update frontend/.env.local
