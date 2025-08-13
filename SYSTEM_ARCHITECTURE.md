@@ -12,9 +12,9 @@ graph TB
     end
     
     subgraph "Smart Contracts"
-        JOBS["📋 Jobs Contract<br/>━━━━━━━━━━━<br/>• Pays workers for jobs<br/>• Receives commission funds<br/>• Tracks job payments"]
+        JOBS["📋 Jobs Contract<br/>━━━━━━━━━━━<br/>Pays workers for jobs<br/>Receives commission funds<br/>Tracks job payments"]
         
-        STORE["🏪 Store Contract<br/>━━━━━━━━━━━<br/>• Sells albums<br/>• Collects revenue<br/>• Distributes commissions"]
+        STORE["🏪 Store Contract<br/>━━━━━━━━━━━<br/>Sells albums<br/>Collects revenue<br/>Distributes commissions"]
     end
     
     subgraph "Token Contracts"
