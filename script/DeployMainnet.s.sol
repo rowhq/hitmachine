@@ -7,8 +7,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TestExt} from "../lib/forge-zksync-std/src/TestExt.sol";
 
 contract DeployMainnetScript is Script, TestExt {
-    uint256 constant INITIAL_ALBUM_PRICE = 10_000; // 0.01 USDC with 6 decimals
-    
+    uint256 constant INITIAL_ALBUM_PRICE = 32e6; // 0.01 USDC with 6 decimals
+
     // Sophon Mainnet USDC address (official)
     address constant MAINNET_USDC = 0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F;
     address constant MAINNET_PAYMASTER = 0x98546B226dbbA8230cf620635a1e4ab01F6A99B2;
@@ -17,7 +17,7 @@ contract DeployMainnetScript is Script, TestExt {
         // Get configuration from environment
         uint256 deployerPrivateKey = vm.envUint("WALLET_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        
+
         // Use mainnet USDC address or environment override
         address usdcAddress = vm.envOr("USDC_ADDRESS", MAINNET_USDC);
 
@@ -29,10 +29,7 @@ contract DeployMainnetScript is Script, TestExt {
         vm.startBroadcast(deployerPrivateKey);
 
         // Setup paymaster for gasless transactions
-        bytes memory paymasterInput = abi.encodeWithSelector(
-            bytes4(keccak256("general(bytes)")),
-            bytes("0x")
-        );
+        bytes memory paymasterInput = abi.encodeWithSelector(bytes4(keccak256("general(bytes)")), bytes("0x"));
         vmExt.zkUsePaymaster(MAINNET_PAYMASTER, paymasterInput);
 
         // Deploy Store implementation
@@ -40,12 +37,8 @@ contract DeployMainnetScript is Script, TestExt {
         console.log("Store implementation deployed at:", address(storeImpl));
 
         // Deploy Store proxy
-        bytes memory storeInitData = abi.encodeWithSelector(
-            StoreV2.initialize.selector,
-            usdcAddress,
-            deployer,
-            INITIAL_ALBUM_PRICE
-        );
+        bytes memory storeInitData =
+            abi.encodeWithSelector(StoreV2.initialize.selector, usdcAddress, deployer, INITIAL_ALBUM_PRICE);
         ERC1967Proxy _storeProxy = new ERC1967Proxy(address(storeImpl), storeInitData);
         console.log("Store proxy deployed at:", address(_storeProxy));
 
@@ -70,10 +63,18 @@ contract DeployMainnetScript is Script, TestExt {
         // Save deployment info to file
         string memory deploymentInfo = string.concat(
             "# Sophon Mainnet Deployment\n",
-            "STORE_PROXY=", vm.toString(address(_storeProxy)), "\n",
-            "STORE_IMPL=", vm.toString(address(storeImpl)), "\n",
-            "USDC_ADDRESS=", vm.toString(usdcAddress), "\n",
-            "ADMIN=", vm.toString(deployer), "\n"
+            "STORE_PROXY=",
+            vm.toString(address(_storeProxy)),
+            "\n",
+            "STORE_IMPL=",
+            vm.toString(address(storeImpl)),
+            "\n",
+            "USDC_ADDRESS=",
+            vm.toString(usdcAddress),
+            "\n",
+            "ADMIN=",
+            vm.toString(deployer),
+            "\n"
         );
         vm.writeFile("deployed-addresses-mainnet.txt", deploymentInfo);
 
