@@ -83,12 +83,13 @@ Store.claimReferralCommissions(jobsAddress, amount)
 ### 5️⃣ **Cycle Continues** ♻️
 
 The circular flow:
-1. Nano LLC pays worker from Jobs contract (32 USDC)
-2. Worker buys 4 albums from Store (32 USDC = 4 albums @ $8 each)
-3. Nano LLC claims commission from Store (32 USDC)
-4. Commission goes back to Jobs contract
-5. Jobs contract can now pay another worker
-6. **Circle complete - cycle repeats!**
+
+* Nano LLC pays worker from Jobs contract (32 USDC)
+* Worker buys 4 albums from Store (32 USDC = 4 albums @ $8 each)
+* Nano LLC claims commission from Store (32 USDC)
+* Commission goes back to Jobs contract
+* Jobs contract can now pay another worker
+* **Circle complete - cycle repeats!**
 
 After initial funding, the system runs on commissions - no additional capital needed!
 
