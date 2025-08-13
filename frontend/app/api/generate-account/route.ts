@@ -6,15 +6,35 @@ import {
     http,
     parseUnits
 } from 'viem';
-import { sophonTestnet } from '../../config/chains';
+import { sophonTestnet, sophonMainnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import { createClient } from '@supabase/supabase-js';
 import jobsAbi from '../../abi/jobsV2.json';
 import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
-const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0x935f8Fd143720B337c521354a545a342DF584D18') as `0x${string}`;
-const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
+
+// Determine network from query parameter
+function getNetworkConfig(request: NextRequest) {
+    const url = new URL(request.url);
+    const isTestnet = url.searchParams.has('testnet');
+    
+    if (isTestnet) {
+        return {
+            chain: sophonTestnet,
+            jobsContract: (process.env.NEXT_PUBLIC_TESTNET_JOBS_CONTRACT || '0x935f8Fd143720B337c521354a545a342DF584D18') as `0x${string}`,
+            rpcUrl: 'https://rpc.testnet.sophon.xyz',
+            network: 'testnet'
+        };
+    } else {
+        return {
+            chain: sophonMainnet,
+            jobsContract: (process.env.NEXT_PUBLIC_MAINNET_JOBS_CONTRACT || process.env.NEXT_PUBLIC_JOBS_CONTRACT || '') as `0x${string}`,
+            rpcUrl: process.env.MAINNET_RPC_URL || 'https://rpc.sophon.xyz',
+            network: 'mainnet'
+        };
+    }
+}
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, '') || '';
@@ -29,13 +49,17 @@ export async function POST(request: NextRequest) {
     const headers = corsHeaders();
     
     try {
+        // Get network configuration
+        const config = getNetworkConfig(request);
+        
         // Get IP address for basic tracking
         const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
                    request.headers.get('x-real-ip') || 
                    request.headers.get('cf-connecting-ip') || 
                    'unknown';
         
-        const index = await kv.get('wallet_index') || 0;
+        const indexKey = `wallet_index_${config.network}`;
+        const index = await kv.get(indexKey) || 0;
 
         // Derive new wallet for the user
         const recipient = mnemonicToAccount(MNEMONIC, {
@@ -43,20 +67,20 @@ export async function POST(request: NextRequest) {
         });
 
         // increment wallet index
-        await kv.incr("wallet_index");
+        await kv.incr(indexKey);
 
         // Use deployer wallet to call Jobs contract
         const distributor = privateKeyToAccount(`0x${process.env.WALLET_PRIVATE_KEY!}`);
 
         const client = createWalletClient({
             account: distributor,
-            chain: sophonTestnet,
-            transport: http(RPC_URL)
+            chain: config.chain,
+            transport: http(config.rpcUrl)
         });
 
         const publicClient = createPublicClient({
-            chain: sophonTestnet,
-            transport: http(RPC_URL)
+            chain: config.chain,
+            transport: http(config.rpcUrl)
         });
 
         // Get nonce for distributor
@@ -71,7 +95,7 @@ export async function POST(request: NextRequest) {
 
         // Execute payUser on Jobs contract (this sends USDC)
         const txHash = await client.writeContract({
-            address: JOBS_CONTRACT,
+            address: config.jobsContract,
             abi: jobsAbi,
             functionName: 'payUser',
             args: [recipient.address, usdcAmount, sophTokenAmount],

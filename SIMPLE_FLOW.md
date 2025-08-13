@@ -29,11 +29,11 @@ flowchart TB
     
     Worker[Worker]
     
-    NanoWallet -->|Step 1 Calls payForJob| JobsContract
-    JobsContract -->|Step 2 Pays 32 USDC per job| Worker
-    Worker -->|Step 3 Buys albums 32 USDC| StoreContract
-    NanoWallet -->|Step 4 Claims 1000 plus USDC commissions| StoreContract
-    StoreContract -->|Step 5 Sends 1000 plus USDC| JobsContract
+    NanoWallet -->|Step 1 payForJob()| JobsContract
+    JobsContract -->|Step 1 transfers 32 USDC| Worker
+    Worker -->|Step 2 buyAlbums()| StoreContract
+    NanoWallet -->|Step 3 claimReferralCommissions()| StoreContract
+    StoreContract -->|Step 3 transfers 1000 plus USDC| JobsContract
     
     style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
     style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
@@ -51,13 +51,22 @@ sequenceDiagram
     participant S as Store Contract
     
     Note over J: Has 1000 plus USDC balance
-    N->>J: payForJob(worker)
-    J->>W: transfers 32 USDC
-    W->>S: buyAlbums() with 32 USDC
-    Note over S: Accumulates 1000 plus USDC revenue
-    N->>S: claimReferralCommissions(jobsContract, 1000 USDC)
-    S->>J: transfers 1000 plus USDC commission
-    Note over J: Balance replenished with 1000 plus USDC
+    rect rgb(200, 255, 200)
+        Note right of N: Step 1 Job Payment
+        N->>J: payForJob(worker)
+        J->>W: transfers 32 USDC
+    end
+    rect rgb(255, 230, 200)
+        Note right of W: Step 2 Album Purchase
+        W->>S: buyAlbums() with 32 USDC
+        Note over S: Accumulates 1000 plus USDC revenue
+    end
+    rect rgb(200, 230, 255)
+        Note right of N: Step 3 Commission Claim
+        N->>S: claimReferralCommissions(jobsContract, 1000 USDC)
+        S->>J: transfers 1000 plus USDC commission
+        Note over J: Balance replenished with 1000 plus USDC
+    end
 ```
 
 ## How It Works
