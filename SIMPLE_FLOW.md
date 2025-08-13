@@ -29,11 +29,11 @@ flowchart TB
     
     Worker[Worker]
     
-    NanoWallet -->|1. Calls payForJob| JobsContract
-    JobsContract -->|2. Pays 32 USDC per job| Worker
-    Worker -->|3. Buys albums 32 USDC| StoreContract
-    NanoWallet -->|4. Claims 1000 plus USDC commissions| StoreContract
-    StoreContract -->|5. Sends 1000 plus USDC| JobsContract
+    NanoWallet -->|Step 1 Calls payForJob| JobsContract
+    JobsContract -->|Step 2 Pays 32 USDC per job| Worker
+    Worker -->|Step 3 Buys albums 32 USDC| StoreContract
+    NanoWallet -->|Step 4 Claims 1000 plus USDC commissions| StoreContract
+    StoreContract -->|Step 5 Sends 1000 plus USDC| JobsContract
     
     style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
     style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
