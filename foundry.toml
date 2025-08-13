@@ -13,7 +13,7 @@ sophon_testnet = {key = "${ETHERSCAN_SOPHON_API_KEY}", url = "https://explorer.t
 
 [rpc_endpoints]
 localhost = "http://127.0.0.1:8545"
-sophon_mainnet = "${SOPHON_MAINNET_RPC_URL}"
-sophon_testnet = "${SOPHON_TESTNET_RPC_URL}"
+sophonMainnet = "${SOPHON_MAINNET_RPC_URL}"
+sophonTestnet = "${SOPHON_TESTNET_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
