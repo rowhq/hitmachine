@@ -7,7 +7,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TestExt} from "../lib/forge-zksync-std/src/TestExt.sol";
 
 contract DeployMainnetScript is Script, TestExt {
-    uint256 constant INITIAL_ALBUM_PRICE = 32e6; // 0.01 USDC with 6 decimals
+    uint256 constant INITIAL_ALBUM_PRICE = 32e6; // 32 USDC with 6 decimals
 
     // Sophon Mainnet USDC address (official)
     address constant MAINNET_USDC = 0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F;
