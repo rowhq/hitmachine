@@ -33,8 +33,8 @@ flowchart TB
     JobsContract -->|Step 2 Transfers 32 USDC| Worker
     Worker -->|Step 3 buyAlbums 32 USDC| StoreContract
     StoreContract -.->|Step 4 Revenue accumulates| StoreContract
-    NanoWallet -->|Step 5 claimReferralCommissions to Jobs address| StoreContract
-    StoreContract -->|Step 6 Commission sent to Jobs| JobsContract
+    NanoWallet ==>|Step 5 calls claimReferralCommissions| StoreContract
+    StoreContract ==>|Sends commission to Jobs per Nano instruction| JobsContract
     JobsContract -.->|Cycle continues| NanoWallet
     
     style NanoWallet fill:#ffebee
