@@ -29,10 +29,10 @@ flowchart TB
     
     Worker[Worker]
     
-    NanoWallet -->|Step 1 payForJob()| JobsContract
+    NanoWallet -->|Step 1 payForJob| JobsContract
     JobsContract -->|Step 1 transfers 32 USDC| Worker
-    Worker -->|Step 2 buyAlbums()| StoreContract
-    NanoWallet -->|Step 3 claimReferralCommissions()| StoreContract
+    Worker -->|Step 2 buyAlbums| StoreContract
+    NanoWallet -->|Step 3 claimReferralCommissions| StoreContract
     StoreContract -->|Step 3 transfers 1000 plus USDC| JobsContract
     
     style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px

@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
                 usdc: '0.01 USDC (from Jobs contract)',
                 soph: '2 SOPH (native for gas)'
             },
-            jobsContract: JOBS_CONTRACT,
+            jobsContract: config.jobsContract,
             status: receipt.status === 'success' && gasReceipt.status === 'success' ? 'success' : 'failed'
         }, { headers });
     } catch (err: any) {

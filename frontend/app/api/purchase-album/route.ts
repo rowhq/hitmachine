@@ -6,16 +6,37 @@ import {
     http,
     parseUnits
 } from 'viem';
-import { sophonTestnet } from '../../config/chains';
+import { sophonTestnet, sophonMainnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/storeV2.json';
 import usdcAbi from '../../abi/mockUsdc.json';
 import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
-const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
-const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520') as `0x${string}`;
-const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad') as `0x${string}`;
+
+// Determine network from query parameter
+function getNetworkConfig(request: NextRequest) {
+    const url = new URL(request.url);
+    const isTestnet = url.searchParams.has('testnet');
+    
+    if (isTestnet) {
+        return {
+            chain: sophonTestnet,
+            storeContract: (process.env.NEXT_PUBLIC_TESTNET_STORE_CONTRACT || '0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520') as `0x${string}`,
+            usdcAddress: (process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || '0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad') as `0x${string}`,
+            rpcUrl: 'https://rpc.testnet.sophon.xyz',
+            network: 'testnet'
+        };
+    } else {
+        return {
+            chain: sophonMainnet,
+            storeContract: (process.env.NEXT_PUBLIC_MAINNET_STORE_CONTRACT || process.env.NEXT_PUBLIC_STORE_CONTRACT || '') as `0x${string}`,
+            usdcAddress: (process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F') as `0x${string}`,
+            rpcUrl: process.env.MAINNET_RPC_URL || 'https://rpc.sophon.xyz',
+            network: 'mainnet'
+        };
+    }
+}
 
 export async function OPTIONS(request: NextRequest) {
     return new NextResponse(null, { status: 200, headers: corsHeaders() });
@@ -25,6 +46,9 @@ export async function POST(request: NextRequest) {
     const headers = corsHeaders();
     
     try {
+        // Get network configuration
+        const config = getNetworkConfig(request);
+        
         let body;
         try {
             body = await request.json();
@@ -60,7 +84,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const maxIndex = await kv.get('wallet_index');
+        const indexKey = `wallet_index_${config.network}`;
+        const maxIndex = await kv.get(indexKey);
         if (index > Number(maxIndex)) {
             return NextResponse.json(
                 { error: `Index out of bounds: max is ${maxIndex}` },
@@ -89,13 +114,13 @@ export async function POST(request: NextRequest) {
         }
 
         const publicClient = createPublicClient({
-            chain: sophonTestnet,
-            transport: http(RPC_URL),
+            chain: config.chain,
+            transport: http(config.rpcUrl),
         });
 
         // Check if album already purchased
         const hasPurchased = await publicClient.readContract({
-            address: STORE_CONTRACT as `0x${string}`,
+            address: config.storeContract,
             abi: storeAbi,
             functionName: 'hasPurchased',
             args: [account.address],
@@ -110,8 +135,8 @@ export async function POST(request: NextRequest) {
 
         const walletClient = createWalletClient({
             account,
-            chain: sophonTestnet,
-            transport: http(RPC_URL),
+            chain: config.chain,
+            transport: http(config.rpcUrl),
         });
 
         // Check wallet's SOPH balance for gas
@@ -140,17 +165,17 @@ export async function POST(request: NextRequest) {
 
         // Get the album price from the store contract
         const albumPrice = await publicClient.readContract({
-            address: STORE_CONTRACT,
+            address: config.storeContract,
             abi: storeAbi,
             functionName: 'albumPrice',
         }) as bigint;
 
         // Check current allowance
         const currentAllowance = await publicClient.readContract({
-            address: USDC_ADDRESS,
+            address: config.usdcAddress,
             abi: usdcAbi,
             functionName: 'allowance',
-            args: [account.address, STORE_CONTRACT],
+            args: [account.address, config.storeContract],
         }) as bigint;
 
         console.log(`Current allowance: ${currentAllowance.toString()}, Album price: ${albumPrice.toString()}`);
@@ -160,12 +185,12 @@ export async function POST(request: NextRequest) {
             console.log(`Current allowance: ${currentAllowance.toString()}, needed: ${albumPrice.toString()}. Approving...`);
             
             try {
-                console.log(`Attempting approval from ${account.address} to ${STORE_CONTRACT}`);
-                console.log(`USDC address: ${USDC_ADDRESS}`);
+                console.log(`Attempting approval from ${account.address} to ${config.storeContract}`);
+                console.log(`USDC address: ${config.usdcAddress}`);
                 
                 // First check the wallet has USDC balance
                 const usdcBalance = await publicClient.readContract({
-                    address: USDC_ADDRESS,
+                    address: config.usdcAddress,
                     abi: usdcAbi,
                     functionName: 'balanceOf',
                     args: [account.address],
@@ -177,15 +202,15 @@ export async function POST(request: NextRequest) {
                 const approvalAmount = parseUnits('0.02', 6); // Approve 0.02 USDC
                 
                 console.log(`Approving ${approvalAmount.toString()} units (album price: ${albumPrice.toString()})`);
-                console.log(`Chain ID: ${sophonTestnet.id}`);
+                console.log(`Chain ID: ${config.chain.id}`);
                 console.log(`Wallet address: ${account.address}`);
                 
                 const approveTx = await walletClient.writeContract({
-                    address: USDC_ADDRESS,
+                    address: config.usdcAddress,
                     abi: usdcAbi,
                     functionName: 'approve',
-                    args: [STORE_CONTRACT, approvalAmount],
-                    chain: sophonTestnet,
+                    args: [config.storeContract, approvalAmount],
+                    chain: config.chain,
                 });
                 
                 console.log(`Approval tx sent: ${approveTx}`);
@@ -231,8 +256,8 @@ export async function POST(request: NextRequest) {
                         wallet: account.address,
                         sophBalance: (Number(sophBalance) / 1e18).toFixed(6),
                         usdcBalance: (Number(usdcBalance) / 1e6).toFixed(6),
-                        usdcAddress: USDC_ADDRESS,
-                        storeContract: STORE_CONTRACT
+                        usdcAddress: config.usdcAddress,
+                        storeContract: config.storeContract
                     },
                     { status: 500, headers }
                 );
@@ -243,11 +268,11 @@ export async function POST(request: NextRequest) {
         try {
             // Skip simulation and directly execute since we have the private key
             const purchaseTx = await walletClient.writeContract({
-                address: STORE_CONTRACT,
+                address: config.storeContract,
                 abi: storeAbi,
                 functionName: 'buyAlbum',
                 args: [],
-                chain: sophonTestnet,
+                chain: config.chain,
             });
             
             // Wait for transaction receipt
