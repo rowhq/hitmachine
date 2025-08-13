@@ -1,5 +1,27 @@
 import { defineChain } from 'viem';
 
+export const sophonMainnet = defineChain({
+  id: 50104,
+  name: 'Sophon',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Sophon',
+    symbol: 'SOPH',
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://rpc.sophon.xyz'],
+    },
+  },
+  blockExplorers: {
+    default: { 
+      name: 'Sophon Explorer', 
+      url: 'https://explorer.sophon.xyz' 
+    },
+  },
+  testnet: false,
+});
+
 export const sophonTestnet = defineChain({
   id: 531050104,
   name: 'Sophon Testnet',
