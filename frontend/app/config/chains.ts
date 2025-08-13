@@ -22,10 +22,10 @@ export const sophonTestnet = defineChain({
   testnet: true,
 });
 
-// USDC address on Sophon Testnet (you'll need to update this with the actual testnet address)
-export const USDC_ADDRESS_TESTNET = '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F'; // TODO: Update with testnet address
-export const SOPH_ADDRESS_TESTNET = '0x0000000000000000000000000000000000000000'; // Native token
+// Token addresses on Sophon Testnet
+export const USDC_ADDRESS_TESTNET = '0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad'; // Mock USDC on testnet
+export const SOPH_ADDRESS_TESTNET = '0x60863D4336d9aF2fB846209F2A8f6137ECA3eF1b'; // Mock SOPH on testnet
 
-// For now, using placeholder addresses until contracts are deployed
-export const STORE_CONTRACT_TESTNET = '0x0000000000000000000000000000000000000000';
-export const JOBS_CONTRACT_TESTNET = '0x0000000000000000000000000000000000000000';
+// Contract addresses on Sophon Testnet
+export const STORE_CONTRACT_TESTNET = '0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520';
+export const JOBS_CONTRACT_TESTNET = '0x935f8Fd143720B337c521354a545a342DF584D18';

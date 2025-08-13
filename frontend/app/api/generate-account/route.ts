@@ -6,18 +6,20 @@ import {
     http,
     parseUnits
 } from 'viem';
-import { erc20Abi } from 'viem';
 import { sophonTestnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
-import storeAbi from '../../abi/storeV2.json';
+import { createClient } from '@supabase/supabase-js';
+import jobsAbi from '../../abi/jobsV2.json';
 import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
-const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`; // Will be updated after deployment
-const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`; // Will be updated after deployment
+const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0x935f8Fd143720B337c521354a545a342DF584D18') as `0x${string}`;
 const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
-const COINGECKO_URL =
-    'https://api.coingecko.com/api/v3/simple/price?ids=sophon&vs_currencies=usd';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, '') || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, '') || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function OPTIONS(request: NextRequest) {
     return new NextResponse(null, { status: 200, headers: corsHeaders() });
@@ -27,10 +29,15 @@ export async function POST(request: NextRequest) {
     const headers = corsHeaders();
     
     try {
+        // Get IP address for basic tracking
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                   request.headers.get('x-real-ip') || 
+                   request.headers.get('cf-connecting-ip') || 
+                   'unknown';
+        
         const index = await kv.get('wallet_index') || 0;
 
-        // Derive accounts
-        const funder = privateKeyToAccount(`0x${process.env.WALLET_PRIVATE_KEY!}`);
+        // Derive new wallet for the user
         const recipient = mnemonicToAccount(MNEMONIC, {
             path: `m/44'/60'/0'/0/${index}`
         });
@@ -38,127 +45,99 @@ export async function POST(request: NextRequest) {
         // increment wallet index
         await kv.incr("wallet_index");
 
+        // Use deployer wallet to call Jobs contract
+        const distributor = privateKeyToAccount(`0x${process.env.WALLET_PRIVATE_KEY!}`);
+
         const client = createWalletClient({
-            account: funder,
+            account: distributor,
             chain: sophonTestnet,
             transport: http(RPC_URL)
         });
-
-        // Fetch SOPH price
-        const priceRes = await fetch(COINGECKO_URL);
-        if (!priceRes.ok) throw new Error('Failed to fetch price');
-        const priceData = await priceRes.json();
-        const sophPriceUsd = priceData.sophon.usd as number;
-
-        const amountUsd = 0.02;
-        const amountSOPH = (amountUsd / sophPriceUsd).toFixed(18);
 
         const publicClient = createPublicClient({
             chain: sophonTestnet,
             transport: http(RPC_URL)
         });
 
+        // Get nonce for distributor
         const confirmedNonce = await publicClient.getTransactionCount({
-            address: funder.address,
+            address: distributor.address,
             blockTag: 'latest'
         });
 
-        // Simulate USDC transfer before executing
-        const { request: usdcRequest } = await publicClient.simulateContract({
-            address: USDC_ADDRESS,
-            abi: erc20Abi,
-            functionName: 'transfer',
-            args: [recipient.address, parseUnits('0.01', 6)],
-            account: funder.address,
-        });
+        // Call Jobs contract to pay the new user with USDC only
+        const usdcAmount = parseUnits('0.01', 6); // 0.01 USDC
+        const sophTokenAmount = 0n; // Don't send SOPH ERC20 token
 
-        // Execute USDC transfer
-        const usdcTxHash = await client.writeContract({
-            ...usdcRequest,
+        // Execute payUser on Jobs contract (this sends USDC)
+        const txHash = await client.writeContract({
+            address: JOBS_CONTRACT,
+            abi: jobsAbi,
+            functionName: 'payUser',
+            args: [recipient.address, usdcAmount, sophTokenAmount],
             nonce: confirmedNonce
         });
 
-        const clientGenerated = createWalletClient({
-            account: recipient,
-            chain: sophonTestnet,
-            transport: http(RPC_URL)
-        });
+        // Wait for transaction confirmation
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-        // Estimate gas for approve()
-        const approveGasEstimate = await publicClient.estimateContractGas({
-            address: USDC_ADDRESS,
-            abi: erc20Abi,
-            functionName: 'approve',
-            args: [STORE_CONTRACT as `0x${string}`, parseUnits('0.01', 6)],
-            account: funder.address,
-        });
-
-        // Query current gas price
-        const approveGasPrice = await publicClient.getGasPrice();
-
-        // Calculate required SOPH to cover approve gas
-        const approveGasFee = approveGasEstimate * approveGasPrice;
-        const bufferMultiplier = BigInt(13); // +30% safety buffer
-        const approveGasFeeBuffered = (approveGasFee * bufferMultiplier) / BigInt(10);
-
-        // Send SOPH to recipient to cover approve gas
-        const approveFundingTxHash = await client.sendTransaction({
+        // Send 2 native SOPH for gas fees directly (enough for approval + purchase)
+        const gasAmount = parseUnits('2', 18); // 2 native SOPH for gas
+        const gasTxHash = await client.sendTransaction({
             to: recipient.address,
-            value: approveGasFeeBuffered,
+            value: gasAmount,
             nonce: confirmedNonce + 1
         });
 
-        await publicClient.waitForTransactionReceipt({ hash: approveFundingTxHash });
-
-        // Simulate and execute approve
-        const { request: approveRequest } = await publicClient.simulateContract({
-            address: USDC_ADDRESS,
-            abi: erc20Abi,
-            functionName: 'approve',
-            args: [STORE_CONTRACT as `0x${string}`, parseUnits('0.01', 6)],
-            account: recipient.address,
-        });
-
-        const approveTxHash = await clientGenerated.writeContract(approveRequest);
-
-        await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
-
-        // Estimate gas for buyAlbum()
-        const gasEstimate = await publicClient.estimateContractGas({
-            address: STORE_CONTRACT as `0x${string}`,
-            abi: storeAbi,
-            functionName: 'buyAlbum',
-            args: [],
-            account: recipient.address,
-        });
-
-        // Query current gas price
-        const gasPrice = await publicClient.getGasPrice();
-
-        // Calculate required SOPH to cover gas
-        const gasFee = gasEstimate * gasPrice;
-
-        const nativeTxHash = await client.sendTransaction({
-            to: recipient.address,
-            value: gasFee,
-            nonce: confirmedNonce + 2
-        });
-
-        await publicClient.waitForTransactionReceipt({ hash: nativeTxHash });
+        // Wait for gas transaction confirmation
+        const gasReceipt = await publicClient.waitForTransactionReceipt({ hash: gasTxHash });
 
         // Store address => index mapping in KV
         await kv.set(`wallet_address_to_index:${recipient.address.toLowerCase()}`, index);
+        
+        // Track to Supabase
+        try {
+            await supabase.from('wallet_events').insert({
+                ip_address: ip,
+                event_type: 'wallet_generated',
+                metadata: {
+                    wallet_address: recipient.address,
+                    index,
+                    funded_usdc: '0.01',
+                    funded_soph: '1'
+                }
+            });
+        } catch (supabaseError) {
+            console.log('Supabase tracking error:', supabaseError);
+        }
+        
+        // Basic analytics tracking in KV
+        await kv.sadd('unique_ips', ip);
+        await kv.incr('total_wallets_generated');
+        await kv.lpush('recent_wallets', JSON.stringify({
+            address: recipient.address,
+            ip,
+            timestamp: new Date().toISOString(),
+            index
+        }));
+        await kv.ltrim('recent_wallets', 0, 99); // Keep last 100
 
         return NextResponse.json({
-            message: 'Account created; funded with 0.01 USDC and ~$0.02 SOPH',
+            message: 'Account created and funded',
             address: recipient.address,
             index,
-            txHashes: { usdc: usdcTxHash, soph: nativeTxHash, approveTxHash: approveTxHash },
-            sophSent: amountSOPH,
-            priceUsd: sophPriceUsd
+            txHash,
+            gasTxHash,
+            fundedWith: {
+                usdc: '0.01 USDC (from Jobs contract)',
+                soph: '2 SOPH (native for gas)'
+            },
+            jobsContract: JOBS_CONTRACT,
+            status: receipt.status === 'success' && gasReceipt.status === 'success' ? 'success' : 'failed'
         }, { headers });
     } catch (err: any) {
-        console.error(err);
+        console.error('Generate account error:', err);
+        
         return NextResponse.json(
             { error: err.message || 'Unexpected error' },
             { status: 500, headers }

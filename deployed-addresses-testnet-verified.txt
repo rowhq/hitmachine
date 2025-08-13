@@ -1,0 +1,37 @@
+SOPHON TESTNET DEPLOYMENT - Latest Deployment
+==============================================
+
+✅ MAIN DEPLOYED CONTRACT ADDRESSES:
+====================================
+Store Contract (Proxy): 0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520
+Jobs Contract (Proxy): 0x935f8Fd143720B337c521354a545a342DF584D18
+
+ALL DEPLOYED CONTRACTS:
+-----------------------
+Mock USDC: 0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad
+Mock SOPH: 0x60863D4336d9aF2fB846209F2A8f6137ECA3eF1b
+Store Proxy: 0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520
+Store Implementation: 0x838F60c6aC51F42a250312FFd2D72815Bba333fd
+Jobs Proxy: 0x935f8Fd143720B337c521354a545a342DF584D18
+Jobs Implementation: 0x71d29D359950310815451C60264B8Abef4697B99
+
+DEPLOYMENT INFO:
+---------------
+Admin/Deployer: 0x4f2CBdDe7dc571e31b2BFE013ba0e2DB50f22ead
+Chain ID: 531050104
+Network: Sophon Testnet
+RPC URL: https://rpc.testnet.sophon.xyz
+Explorer: https://explorer.testnet.sophon.xyz/
+
+TO MANUALLY VERIFY:
+------------------
+Visit the following URLs to verify contracts manually:
+1. Store Proxy: https://explorer.testnet.sophon.xyz/address/0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520
+2. Jobs Proxy: https://explorer.testnet.sophon.xyz/address/0x935f8Fd143720B337c521354a545a342DF584D18
+
+FRONTEND ENVIRONMENT VARIABLES:
+-------------------------------
+NEXT_PUBLIC_USDC_ADDRESS=0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad
+NEXT_PUBLIC_SOPH_ADDRESS=0x60863D4336d9aF2fB846209F2A8f6137ECA3eF1b
+NEXT_PUBLIC_STORE_CONTRACT=0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520
+NEXT_PUBLIC_JOBS_CONTRACT=0x935f8Fd143720B337c521354a545a342DF584D18

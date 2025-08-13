@@ -53,7 +53,7 @@ export default function GenerateWallet() {
       {result && (
         <div className="mt-4 space-y-3">
           <div className="p-3 bg-green-50 border border-green-200 rounded">
-            <p className="text-green-700 font-medium">{result.message}</p>
+            <p className="text-green-700 font-medium">✅ {result.message}</p>
           </div>
           
           <div className="bg-gray-50 p-3 rounded space-y-2">
@@ -65,30 +65,40 @@ export default function GenerateWallet() {
               <span className="font-medium">Index:</span>
               <span className="ml-2">{result.index}</span>
             </div>
-            <div>
-              <span className="font-medium">SOPH Sent:</span>
-              <span className="ml-2">{result.sophSent} (${result.priceUsd}/SOPH)</span>
-            </div>
+            {result.fundedWith && (
+              <div>
+                <span className="font-medium">Funded with:</span>
+                <span className="ml-2">{result.fundedWith.usdc} + {result.fundedWith.soph}</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-medium">Transaction Hashes:</h3>
+            <h3 className="font-medium">Transactions:</h3>
             <div className="text-sm space-y-1">
               <div>
-                USDC: <a href={`https://explorer.sophon.xyz/tx/${result.txHashes.usdc}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {result.txHashes.usdc.slice(0, 10)}...
+                <span className="text-gray-600">USDC from Jobs:</span>{' '}
+                <a href={`https://explorer.testnet.sophon.xyz/tx/${result.txHash}`} 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   className="text-blue-600 hover:underline">
+                  {result.txHash?.slice(0, 10)}...{result.txHash?.slice(-8)}
                 </a>
               </div>
-              <div>
-                SOPH: <a href={`https://explorer.sophon.xyz/tx/${result.txHashes.soph}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {result.txHashes.soph.slice(0, 10)}...
-                </a>
-              </div>
-              <div>
-                Approval: <a href={`https://explorer.sophon.xyz/tx/${result.txHashes.approveTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {result.txHashes.approveTxHash.slice(0, 10)}...
-                </a>
-              </div>
+              {result.gasTxHash && (
+                <div>
+                  <span className="text-gray-600">SOPH for gas:</span>{' '}
+                  <a href={`https://explorer.testnet.sophon.xyz/tx/${result.gasTxHash}`} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     className="text-blue-600 hover:underline">
+                    {result.gasTxHash?.slice(0, 10)}...{result.gasTxHash?.slice(-8)}
+                  </a>
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-gray-600 mt-2">
+              Funded from Jobs Contract: {result.jobsContract?.slice(0, 10)}...{result.jobsContract?.slice(-8)}
             </div>
           </div>
         </div>

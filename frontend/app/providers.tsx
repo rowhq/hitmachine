@@ -1,7 +1,19 @@
 'use client';
 
 import '@rainbow-me/rainbowkit/styles.css';
-import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { 
+  getDefaultConfig, 
+  RainbowKitProvider,
+  getDefaultWallets,
+  Wallet
+} from '@rainbow-me/rainbowkit';
+import { 
+  rabbyWallet,
+  metaMaskWallet,
+  walletConnectWallet,
+  rainbowWallet,
+  coinbaseWallet
+} from '@rainbow-me/rainbowkit/wallets';
 import { WagmiProvider } from 'wagmi';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { defineChain } from 'viem';
@@ -32,10 +44,24 @@ const sophonMainnet = defineChain({
 const isMainnet = process.env.NEXT_PUBLIC_NETWORK === 'mainnet';
 const activeChain = isMainnet ? sophonMainnet : sophonTestnet;
 
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID';
+
 const config = getDefaultConfig({
   appName: 'HitMachine',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
+  projectId,
   chains: [activeChain],
+  wallets: [
+    {
+      groupName: 'Popular',
+      wallets: [
+        rabbyWallet,
+        metaMaskWallet,
+        rainbowWallet,
+        coinbaseWallet,
+        walletConnectWallet,
+      ],
+    },
+  ],
   ssr: true,
 });
 

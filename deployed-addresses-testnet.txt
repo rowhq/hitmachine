@@ -1,0 +1,35 @@
+SOPHON TESTNET DEPLOYMENT - 2025-08-12
+========================================
+
+DEPLOYED CONTRACT ADDRESSES:
+----------------------------
+Mock USDC: 0xD44379a3607af32052399C241173C2227D282082
+Mock SOPH: 0x86e520948034002e34151b8c56F913D265802499
+Store Proxy: 0xb2F3aADC8d5aB995BcEFB737aBE81F764beB39c6
+Store Implementation: 0x517288c20eC689d0eaBAA4AE91a3004b9cE06839
+Jobs Proxy: 0x7e1FA8b0f9A53b6F185880a34118923958807B22
+Jobs Implementation: 0xF0217c440632Bb5bac958E166359b8243b396194
+
+ADMIN/DEPLOYER:
+--------------
+Admin: 0x4f2CBdDe7dc571e31b2BFE013ba0e2DB50f22ead
+
+CONFIGURATION:
+-------------
+Initial Album Price: 0.01 USDC (10,000 with 6 decimals)
+Chain ID: 531050104
+Network: Sophon Testnet
+RPC URL: https://rpc.testnet.sophon.xyz
+Explorer: https://explorer.sophon.xyz/
+
+MAIN CONTRACTS TO INTERACT WITH:
+--------------------------------
+1. Store Contract (Proxy): 0xb2F3aADC8d5aB995BcEFB737aBE81F764beB39c6
+   - This is where album purchases happen
+   
+2. Jobs Contract (Proxy): 0x7e1FA8b0f9A53b6F185880a34118923958807B22
+   - This handles payment distribution
+
+TO VERIFY CONTRACTS:
+-------------------
+Visit: https://explorer.sophon.xyz/contracts/verify?address=<CONTRACT_ADDRESS>

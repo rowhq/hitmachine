@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import "@openzeppelin-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import "@openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin-upgradeable/contracts/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -12,24 +11,25 @@ contract StoreV2 is
     Initializable,
     AccessControlUpgradeable,
     UUPSUpgradeable,
-    ReentrancyGuardUpgradeable,
     PausableUpgradeable
 {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
+    bytes32 public constant COMMISSION_CLAIMER_ROLE = keccak256("COMMISSION_CLAIMER_ROLE");
 
     IERC20 public usdc;
     uint256 public albumPrice;
     uint256 public totalPurchases;
     uint256 public totalRevenue;
+    
+    // Expected standard purchase amount (32 USDC = 3200 albums)
+    uint256 public constant EXPECTED_PURCHASE_AMOUNT = 32 * 10**6; // 32 USDC
 
-    mapping(address => bool) public hasPurchased;
-    mapping(address => uint256) public purchaseTimestamp;
-
-    event AlbumPurchased(address indexed buyer, uint256 price, uint256 timestamp);
+    event AlbumPurchased(address indexed buyer, uint256 price);
     event PriceUpdated(uint256 oldPrice, uint256 newPrice);
     event FundsWithdrawn(address indexed to, uint256 amount);
+    event ReferralCommissionsClaimed(address indexed claimedBy, address indexed sentTo, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -43,7 +43,6 @@ contract StoreV2 is
 
         __AccessControl_init();
         __UUPSUpgradeable_init();
-        __ReentrancyGuard_init();
         __Pausable_init();
 
         usdc = IERC20(_usdc);
@@ -53,20 +52,41 @@ contract StoreV2 is
         _grantRole(ADMIN_ROLE, _admin);
         _grantRole(OPERATOR_ROLE, _admin);
         _grantRole(WITHDRAWER_ROLE, _admin);
+        // Note: COMMISSION_CLAIMER_ROLE should be granted to nano wallet separately
     }
 
-    function buyAlbum() external nonReentrant whenNotPaused {
-        require(!hasPurchased[msg.sender], "Already purchased");
-        require(usdc.transferFrom(msg.sender, address(this), albumPrice), "Payment failed");
+    function buyAlbums() external whenNotPaused {
+        // Calculate how many albums can be purchased with user's approved USDC
+        uint256 userAllowance = usdc.allowance(msg.sender, address(this));
+        uint256 userBalance = usdc.balanceOf(msg.sender);
+        uint256 availableAmount = userAllowance < userBalance ? userAllowance : userBalance;
+        
+        require(availableAmount >= albumPrice, "Insufficient funds or allowance");
+        
+        // Calculate number of albums to purchase
+        uint256 albumCount = availableAmount / albumPrice;
+        uint256 totalCost = albumCount * albumPrice;
+        
+        require(albumCount > 0, "Cannot purchase zero albums");
+        require(usdc.transferFrom(msg.sender, address(this), totalCost), "Payment failed");
 
-        hasPurchased[msg.sender] = true;
-        purchaseTimestamp[msg.sender] = block.timestamp;
-        totalPurchases++;
-        totalRevenue += albumPrice;
+        totalPurchases += albumCount;
+        totalRevenue += totalCost;
 
-        emit AlbumPurchased(msg.sender, albumPrice, block.timestamp);
+        emit AlbumPurchased(msg.sender, totalCost);
+    }
+    
+    // Helper function to calculate how many albums for a given amount
+    function calculateAlbumCount(uint256 usdcAmount) external view returns (uint256) {
+        return usdcAmount / albumPrice;
+    }
+    
+    // Check if standard amount would buy expected albums
+    function getExpectedAlbumCount() external view returns (uint256) {
+        return EXPECTED_PURCHASE_AMOUNT / albumPrice;
     }
 
+    // Admin withdrawal function
     function withdrawFunds(address to, uint256 amount) external onlyRole(WITHDRAWER_ROLE) {
         require(to != address(0), "Invalid recipient");
         require(amount > 0, "Amount must be greater than 0");
@@ -74,6 +94,25 @@ contract StoreV2 is
 
         require(usdc.transfer(to, amount), "Withdraw failed");
         emit FundsWithdrawn(to, amount);
+    }
+
+    // Nano wallet claims referral commissions and directs where to send them
+    function claimReferralCommissions(address destination, uint256 amount) external onlyRole(COMMISSION_CLAIMER_ROLE) {
+        require(destination != address(0), "Invalid destination");
+        require(amount > 0, "Amount must be greater than 0");
+        require(amount <= usdc.balanceOf(address(this)), "Insufficient balance");
+
+        require(usdc.transfer(destination, amount), "Commission transfer failed");
+        emit ReferralCommissionsClaimed(msg.sender, destination, amount);
+    }
+
+    function claimAllReferralCommissions(address destination) external onlyRole(COMMISSION_CLAIMER_ROLE) {
+        uint256 balance = usdc.balanceOf(address(this));
+        require(balance > 0, "No commissions to claim");
+        require(destination != address(0), "Invalid destination");
+
+        require(usdc.transfer(destination, balance), "Commission transfer failed");
+        emit ReferralCommissionsClaimed(msg.sender, destination, balance);
     }
 
     function withdrawAll(address to) external onlyRole(WITHDRAWER_ROLE) {
@@ -105,16 +144,12 @@ contract StoreV2 is
         return usdc.balanceOf(address(this));
     }
 
-    function getBuyerInfo(address buyer) external view returns (bool purchased, uint256 timestamp) {
-        return (hasPurchased[buyer], purchaseTimestamp[buyer]);
-    }
-
     function getStats() external view returns (uint256 price, uint256 purchases, uint256 revenue, uint256 balance) {
         return (albumPrice, totalPurchases, totalRevenue, usdc.balanceOf(address(this)));
     }
 
     function canBuy(address buyer) external view returns (bool) {
-        return !hasPurchased[buyer] && !paused();
+        return !paused();
     }
 
     // Required for UUPS pattern
