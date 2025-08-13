@@ -1,89 +1,101 @@
-# HitMachine
+# HitMachine - Blockchain Album Purchase System
 
-A blockchain-based album purchase system built on the Sophon network using upgradeable smart contracts.
+A decentralized album purchase system built on Sophon (zkSync) that enables gasless transactions through paymaster integration.
 
-## Overview
+## System Flow
 
-HitMachine enables users to purchase albums using USDC on the Sophon network. The system features:
-- UUPS upgradeable smart contracts for future improvements
-- Role-based access control for secure fund management
-- Integrated Next.js frontend with API endpoints
-- Automated CI/CD with Claude Code reviews
-
-## Architecture
-
-### Smart Contracts
-- **StoreV2**: Handles album purchases at configurable prices
-- **JobsV2**: Manages fund distribution and claims from Store
-
-### Frontend
-- Next.js application with integrated API routes
-- Support for wallet generation and album purchases
-- Real-time balance checking
-
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```mermaid
+graph TD
+    User[User/Worker]
+    Nano[Nano Frontend]
+    Jobs[Jobs Contract]
+    Store[Store Contract]
+    
+    User -->|1. Request Wallet| Nano
+    Nano -->|2. generate-account| Jobs
+    Jobs -->|3. payUser 0.01 USDC + 2 SOPH| User
+    User -->|4. Click Buy Album| Nano
+    Nano -->|5. purchase-album| Store
+    Store -->|6. buyAlbum transfers USDC| Store
+    Store -->|7. Album Access| User
+    Jobs -.->|Admin: claimFromStore| Store
 ```
 
-### Test
+## How It Works
 
-```shell
-$ forge test
+### 1. Wallet Generation
+- User visits site without a wallet
+- Frontend calls `/api/generate-account`
+- Jobs contract sends user 0.01 USDC + 2 SOPH for gas
+- Wallet address stored in Vercel KV for tracking
+
+### 2. Album Purchase  
+- User clicks "Buy Album" (costs 0.01 USDC)
+- Frontend calls `/api/purchase-album`
+- Store contract's `buyAlbum()` method transfers USDC
+- Purchase recorded on-chain
+
+### 3. Revenue Flow
+- Album revenue accumulates in Store contract
+- Admin can call `claimFromStore()` on Jobs contract
+- Jobs pulls funds from Store for redistribution
+
+## Smart Contracts (Sophon Testnet)
+
+- **Store Contract**: Handles album sales and purchase tracking
+- **Jobs Contract**: Manages fund distribution and wallet funding
+- **MockUSDC**: Test USDC token for development
+- **Paymaster**: `0x98546B226dbbA8230cf620635a1e4ab01F6A99B2` (sponsors gas fees)
+
+## Key Methods
+
+### Jobs Contract
+- `payUser(address user, uint256 usdcAmount, uint256 sophAmount)` - Funds new wallets
+- `claimFromStore()` - Claims revenue from Store contract
+- `depositFunds()` - Add funds to Jobs for distribution
+
+### Store Contract  
+- `buyAlbum()` - Purchase an album for 0.01 USDC
+- `hasPurchased(address)` - Check if user already purchased
+- `withdrawAll(address)` - Admin withdraws accumulated revenue
+
+## Tech Stack
+
+- **Smart Contracts**: Solidity + OpenZeppelin (UUPS Upgradeable)
+- **Blockchain**: Sophon (zkSync L2)
+- **Frontend**: Next.js 14 + TypeScript
+- **Wallet**: RainbowKit + Wagmi
+- **Storage**: Vercel KV + Supabase
+- **Deployment**: Vercel + GitHub Actions
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run frontend locally
+cd frontend && npm run dev
+
+# Compile contracts  
+forge build --zksync
+
+# Deploy contracts
+forge script script/DeployTestnet.s.sol --rpc-url https://rpc.testnet.sophon.xyz --broadcast --zksync
+
+# Run tests
+forge test
 ```
 
-### Format
+## Environment Variables
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+```env
+# Frontend (.env.local)
+NEXT_PUBLIC_STORE_CONTRACT=0x...
+NEXT_PUBLIC_JOBS_CONTRACT=0x...
+NEXT_PUBLIC_USDC_ADDRESS=0x...
+WALLET_PRIVATE_KEY=0x...
+MNEMONIC="..."
+KV_REST_API_URL=...
+SUPABASE_URL=...
 ```
