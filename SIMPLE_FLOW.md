@@ -14,7 +14,34 @@
 * Obligation: Pays referral commissions to Nano LLC per agreement
 * Jurisdiction: Wyoming LLC
 
-## Simple Flow Diagram
+## Entity Relationship Diagram
+
+```mermaid
+flowchart TB
+    subgraph NanoLLC[Nano LLC Referral Company]
+        NanoWallet[Nano Wallet]
+        JobsContract[Jobs Contract]
+    end
+    
+    subgraph AlbumSalesLLC[Album Sales LLC]
+        StoreContract[Store Contract]
+    end
+    
+    Worker[Worker]
+    
+    NanoWallet -->|1. Calls payForJob| JobsContract
+    JobsContract -->|2. Pays 32 USDC per job| Worker
+    Worker -->|3. Buys albums 32 USDC| StoreContract
+    NanoWallet -->|4. Claims 1000+ USDC commissions| StoreContract
+    StoreContract -->|5. Sends 1000+ USDC| JobsContract
+    
+    style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style Worker fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style StoreContract fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+```
+
+## Sequence Flow Diagram
 
 ```mermaid
 sequenceDiagram
@@ -23,21 +50,21 @@ sequenceDiagram
     participant W as Worker
     participant S as Store Contract
     
-    Note over J: Has 32 USDC
+    Note over J: Has 1,000+ USDC balance
     N->>J: payForJob(worker)
     J->>W: transfers 32 USDC
     W->>S: buyAlbums() with 32 USDC
-    Note over S: Now has 32 USDC revenue
-    N->>S: claimReferralCommissions(jobsContract, 32)
-    S->>J: transfers 32 USDC commission
-    Note over J: Refunded with 32 USDC
+    Note over S: Accumulates 1,000+ USDC revenue
+    N->>S: claimReferralCommissions(jobsContract, 1000+)
+    S->>J: transfers 1,000+ USDC commission
+    Note over J: Balance replenished with 1,000+ USDC
 ```
 
 ## How It Works
 
 ### 1️⃣ **Bootstrap** (One-time)
-* Nano company funds Jobs contract with initial USDC
-* This provides starting capital for user acquisition
+* Nano company funds Jobs contract with initial USDC (1,000+ for multiple jobs)
+* This provides starting capital for user acquisition at scale
 
 ### 2️⃣ **User Acquisition**
 ```solidity
@@ -58,26 +85,28 @@ Store.buyAlbums()
 ```solidity
 Store.claimReferralCommissions(jobsAddress, amount)
 ```
-* Nano claims earned commissions from Store
+* Nano claims earned commissions from Store (typically 1,000+ USDC)
 * Directs them to Jobs contract
-* Jobs contract now has funds for more workers
+* Jobs contract now has funds for many more workers (30+ jobs)
 
 ### 5️⃣ **Cycle Continues** ♻️
 
 The circular flow:
 
-* Nano LLC pays worker from Jobs contract (32 USDC)
+* Nano LLC pays worker from Jobs contract (32 USDC per job)
 * Worker buys 4 albums from Store (32 USDC = 4 albums @ $8 each)
-* Nano LLC claims commission from Store (32 USDC)
+* After many purchases accumulate, Nano LLC claims large commission from Store (1,000+ USDC)
 * Commission goes back to Jobs contract
-* Jobs contract can now pay another worker
-* **Circle complete - cycle repeats!**
+* Jobs contract can now pay 30+ more workers
+* **Circle complete - cycle scales up!**
 
 After initial funding, the system runs on commissions - no additional capital needed!
 
 ## Key Points
 
-* 32 USDC = Standard amount throughout the system
+* 32 USDC = Standard job payment and album purchase amount
+* Jobs contract maintains 1,000+ USDC balance for continuous operations
+* Commission claims are batched (1,000+ USDC) for efficiency
 * Two Companies: Nano (referral) and Store (sales) with legal agreement
 * Self-Sustaining: After initial funding, commissions fund future operations
 * Simple Flow: Just 3 main contract calls in the cycle
