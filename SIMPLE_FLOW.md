@@ -29,12 +29,12 @@ flowchart TB
     
     Worker[Worker]
     
-    NanoWallet -->|1. payForJob worker| JobsContract
-    JobsContract -->|2. Pays 32 USDC| Worker
-    Worker -->|3. buyAlbums with 32 USDC| StoreContract
-    NanoWallet ==>|4. claimReferralCommissions jobsAddress 32 USDC| StoreContract
-    StoreContract ==>|Transfers commission to Jobs| JobsContract
-    JobsContract -.->|Ready for next worker| JobsContract
+    NanoWallet ==>|1. Nano calls payForJob worker| JobsContract
+    JobsContract ==>|Jobs contract transfers 32 USDC to worker| Worker
+    Worker -->|2. Worker calls buyAlbums with 32 USDC| StoreContract
+    NanoWallet ==>|3. Nano calls claimReferralCommissions jobsAddress 32 USDC| StoreContract
+    StoreContract ==>|Store transfers commission to Jobs| JobsContract
+    JobsContract -.->|Jobs contract refunded and ready| JobsContract
     
     style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
     style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
