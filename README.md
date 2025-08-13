@@ -1,101 +1,89 @@
-# HitMachine - Blockchain Album Purchase System
+# HitMachine - System Flow
 
-A decentralized album purchase system built on Sophon (zkSync) that enables gasless transactions through paymaster integration.
-
-## System Flow
+## Simple Flow Diagram
 
 ```mermaid
-graph TD
-    User[User/Worker]
-    Nano[Nano Frontend]
-    Jobs[Jobs Contract]
-    Store[Store Contract]
+flowchart TB
+    subgraph NanoLLC[Nano LLC - Referral Company]
+        NanoWallet[Nano Wallet]
+        JobsContract[Jobs Contract]
+    end
     
-    User -->|1. Request Wallet| Nano
-    Nano -->|2. generate-account| Jobs
-    Jobs -->|3. payUser 0.01 USDC + 2 SOPH| User
-    User -->|4. Click Buy Album| Nano
-    Nano -->|5. purchase-album| Store
-    Store -->|6. buyAlbum transfers USDC| Store
-    Store -->|7. Album Access| User
-    Jobs -.->|Admin: claimFromStore| Store
+    subgraph AlbumSalesLLC[Album Sales LLC]
+        StoreContract[Store Contract]
+    end
+    
+    Worker[Worker]
+    
+    NanoWallet -->|Step 1: payForJob| JobsContract
+    JobsContract -->|Step 1: transfers 32 USDC| Worker
+    Worker -->|Step 2: buyAlbums| StoreContract
+    NanoWallet -->|Step 3: claimReferralCommissions| StoreContract
+    StoreContract -->|Step 3: transfers 1000+ USDC| JobsContract
+    
+    style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style Worker fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style StoreContract fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
 ```
 
 ## How It Works
 
-### 1. Wallet Generation
-- User visits site without a wallet
-- Frontend calls `/api/generate-account`
-- Jobs contract sends user 0.01 USDC + 2 SOPH for gas
-- Wallet address stored in Vercel KV for tracking
+### The Cycle ♻️
 
-### 2. Album Purchase  
-- User clicks "Buy Album" (costs 0.01 USDC)
-- Frontend calls `/api/purchase-album`
-- Store contract's `buyAlbum()` method transfers USDC
-- Purchase recorded on-chain
+1. **Nano pays worker** → Jobs contract sends 32 USDC to worker
+2. **Worker buys albums** → Uses 32 USDC to purchase 4 albums @ $8 each
+3. **Nano claims commission** → After sales accumulate, claims 1000+ USDC back to Jobs
+4. **Repeat** → Jobs contract now has funds for 30+ more workers
 
-### 3. Revenue Flow
-- Album revenue accumulates in Store contract
-- Admin can call `claimFromStore()` on Jobs contract
-- Jobs pulls funds from Store for redistribution
+## Quick Start
 
-## Smart Contracts (Sophon Testnet)
+```bash
+# Install
+npm install
 
-- **Store Contract**: Handles album sales and purchase tracking
-- **Jobs Contract**: Manages fund distribution and wallet funding
-- **MockUSDC**: Test USDC token for development
-- **Paymaster**: `0x98546B226dbbA8230cf620635a1e4ab01F6A99B2` (sponsors gas fees)
+# Run frontend
+cd frontend && npm run dev
+
+# Deploy contracts
+forge script script/Deploy.s.sol --rpc-url <RPC_URL> --broadcast --zksync
+```
+
+## Smart Contracts
+
+- **Jobs Contract**: Pays workers and receives commissions
+- **Store Contract**: Sells albums and pays referral commissions
+- **Network**: Sophon (zkSync L2)
 
 ## Key Methods
 
-### Jobs Contract
-- `payUser(address user, uint256 usdcAmount, uint256 sophAmount)` - Funds new wallets
-- `claimFromStore()` - Claims revenue from Store contract
-- `depositFunds()` - Add funds to Jobs for distribution
+```solidity
+// Jobs Contract
+Jobs.payForJob(workerAddress)  // Pay 32 USDC to worker
 
-### Store Contract  
-- `buyAlbum()` - Purchase an album for 0.01 USDC
-- `hasPurchased(address)` - Check if user already purchased
-- `withdrawAll(address)` - Admin withdraws accumulated revenue
-
-## Tech Stack
-
-- **Smart Contracts**: Solidity + OpenZeppelin (UUPS Upgradeable)
-- **Blockchain**: Sophon (zkSync L2)
-- **Frontend**: Next.js 14 + TypeScript
-- **Wallet**: RainbowKit + Wagmi
-- **Storage**: Vercel KV + Supabase
-- **Deployment**: Vercel + GitHub Actions
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run frontend locally
-cd frontend && npm run dev
-
-# Compile contracts  
-forge build --zksync
-
-# Deploy contracts
-forge script script/DeployTestnet.s.sol --rpc-url https://rpc.testnet.sophon.xyz --broadcast --zksync
-
-# Run tests
-forge test
+// Store Contract  
+Store.buyAlbums()  // Purchase albums with USDC
+Store.claimReferralCommissions(jobsAddress, amount)  // Claim earned commissions
 ```
 
-## Environment Variables
+## Environment Setup
 
 ```env
-# Frontend (.env.local)
-NEXT_PUBLIC_STORE_CONTRACT=0x...
-NEXT_PUBLIC_JOBS_CONTRACT=0x...
-NEXT_PUBLIC_USDC_ADDRESS=0x...
 WALLET_PRIVATE_KEY=0x...
 MNEMONIC="..."
-KV_REST_API_URL=...
-SUPABASE_URL=...
+NEXT_PUBLIC_TESTNET_JOBS_CONTRACT=0x...
+NEXT_PUBLIC_TESTNET_STORE_CONTRACT=0x...
+NEXT_PUBLIC_MAINNET_JOBS_CONTRACT=0x...
+NEXT_PUBLIC_MAINNET_STORE_CONTRACT=0x...
 ```
+
+## API Endpoints
+
+- `/api/generate-account` - Create funded wallet (`?testnet` for testnet)
+- `/api/purchase-album` - Execute album purchase (`?testnet` for testnet)
+
+## Documentation
+
+- [System Architecture](./SYSTEM_ARCHITECTURE.md)
+- [Deployment Guide](./docs/DEPLOYMENT.md)
+- [Contract Details](./CONTRACTS_README.md)
