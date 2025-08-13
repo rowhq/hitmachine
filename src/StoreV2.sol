@@ -16,29 +16,17 @@ contract StoreV2 is
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
-    bytes32 public constant COMMISSION_CLAIMER_ROLE = keccak256("COMMISSION_CLAIMER_ROLE");
+    bytes32 public constant MARKETING_BUDGET_ROLE = keccak256("MARKETING_BUDGET_ROLE");
 
     IERC20 public usdc;
     uint256 public giftcardPrice;
     uint256 public totalPurchases;
     uint256 public totalRevenue;
-    
-    // Expected standard purchase amount (32 USDC for gift card)
-    uint256 public constant EXPECTED_PURCHASE_AMOUNT = 32 * 10**6; // 32 USDC
-    
-    // Promotional Commission Structure (tiered based on total commissions claimed)
-    // First $50M in sales: 100% commission to Nano LLC
-    // Next $10M: 90% commission  
-    // Next $10M: 80% commission, decreasing by 10% each $10M
-    // Eventually reaches 0% after $140M total claimed
-    uint256 public constant PROMO_TIER_SIZE = 10_000_000 * 10**6; // $10M USDC
-    uint256 public constant PROMO_FIRST_TIER = 50_000_000 * 10**6; // $50M USDC at 100%
-    uint256 public totalCommissionsClaimed;
 
     event GiftcardPurchased(address indexed buyer, uint256 price);
     event PriceUpdated(uint256 oldPrice, uint256 newPrice);
     event FundsWithdrawn(address indexed to, uint256 amount);
-    event MarketingCommissionsClaimed(address indexed claimedBy, address indexed sentTo, uint256 amount, uint256 commissionRate);
+    event MarketingPayment(address indexed to, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -61,38 +49,18 @@ contract StoreV2 is
         _grantRole(ADMIN_ROLE, _admin);
         _grantRole(OPERATOR_ROLE, _admin);
         _grantRole(WITHDRAWER_ROLE, _admin);
-        // Note: COMMISSION_CLAIMER_ROLE should be granted to nano wallet separately
+        // Note: MARKETING_BUDGET_ROLE should be granted to nano wallet separately
     }
 
     function buyGiftcard() external whenNotPaused {
-        // Calculate how many gift cards can be purchased with user's approved USDC
-        uint256 userAllowance = usdc.allowance(msg.sender, address(this));
-        uint256 userBalance = usdc.balanceOf(msg.sender);
-        uint256 availableAmount = userAllowance < userBalance ? userAllowance : userBalance;
-        
-        require(availableAmount >= giftcardPrice, "Insufficient funds or allowance");
-        
-        // Calculate number of gift cards to purchase
-        uint256 giftcardCount = availableAmount / giftcardPrice;
-        uint256 totalCost = giftcardCount * giftcardPrice;
-        
-        require(giftcardCount > 0, "Cannot purchase zero gift cards");
-        require(usdc.transferFrom(msg.sender, address(this), totalCost), "Payment failed");
+        // Simply attempt to transfer the gift card price
+        // transferFrom will fail if insufficient balance or allowance
+        require(usdc.transferFrom(msg.sender, address(this), giftcardPrice), "Payment failed");
 
-        totalPurchases += giftcardCount;
-        totalRevenue += totalCost;
+        totalPurchases += 1;
+        totalRevenue += giftcardPrice;
 
-        emit GiftcardPurchased(msg.sender, totalCost);
-    }
-    
-    // Helper function to calculate how many gift cards for a given amount
-    function calculateGiftcardCount(uint256 usdcAmount) external view returns (uint256) {
-        return usdcAmount / giftcardPrice;
-    }
-    
-    // Check if standard amount would buy expected gift cards
-    function getExpectedGiftcardCount() external view returns (uint256) {
-        return EXPECTED_PURCHASE_AMOUNT / giftcardPrice;
+        emit GiftcardPurchased(msg.sender, giftcardPrice);
     }
 
     // Admin withdrawal function
@@ -105,56 +73,14 @@ contract StoreV2 is
         emit FundsWithdrawn(to, amount);
     }
 
-    // Calculate current commission rate based on promotional tier system
-    function getCurrentCommissionRate() public view returns (uint256) {
-        if (totalCommissionsClaimed < PROMO_FIRST_TIER) {
-            return 100; // 100% commission for first $50M
-        }
-        
-        uint256 excessClaimed = totalCommissionsClaimed - PROMO_FIRST_TIER;
-        uint256 tiersPassed = excessClaimed / PROMO_TIER_SIZE;
-        
-        if (tiersPassed >= 9) {
-            return 0; // 0% commission after $140M total claimed
-        }
-        
-        // Each tier reduces commission by 10%
-        return 90 - (tiersPassed * 10);
-    }
-    
-    // Calculate claimable commission amount based on current tier
-    function getClaimableCommission() public view returns (uint256) {
-        uint256 balance = usdc.balanceOf(address(this));
-        uint256 rate = getCurrentCommissionRate();
-        return (balance * rate) / 100;
-    }
-    
-    // Nano wallet claims marketing commissions per the promotional agreement
-    function payMarketing(address destination, uint256 amount) external onlyRole(COMMISSION_CLAIMER_ROLE) {
+    // Simple marketing payment function - no commission rates
+    function payMarketing(address destination, uint256 amount) external onlyRole(MARKETING_BUDGET_ROLE) {
         require(destination != address(0), "Invalid destination");
         require(amount > 0, "Amount must be greater than 0");
-        
-        uint256 claimable = getClaimableCommission();
-        require(amount <= claimable, "Amount exceeds claimable commission per agreement");
         require(amount <= usdc.balanceOf(address(this)), "Insufficient balance");
-
-        totalCommissionsClaimed += amount;
-        uint256 rate = getCurrentCommissionRate();
         
-        require(usdc.transfer(destination, amount), "Commission transfer failed");
-        emit MarketingCommissionsClaimed(msg.sender, destination, amount, rate);
-    }
-
-    function payAllMarketing(address destination) external onlyRole(COMMISSION_CLAIMER_ROLE) {
-        uint256 claimable = getClaimableCommission();
-        require(claimable > 0, "No commissions to claim at current tier");
-        require(destination != address(0), "Invalid destination");
-
-        totalCommissionsClaimed += claimable;
-        uint256 rate = getCurrentCommissionRate();
-        
-        require(usdc.transfer(destination, claimable), "Commission transfer failed");
-        emit MarketingCommissionsClaimed(msg.sender, destination, claimable, rate);
+        require(usdc.transfer(destination, amount), "Marketing payment failed");
+        emit MarketingPayment(destination, amount);
     }
 
     function withdrawAll(address to) external onlyRole(WITHDRAWER_ROLE) {

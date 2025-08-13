@@ -1,0 +1,151 @@
+#!/bin/bash
+
+# Alternative deployment script using forge create with paymaster for gasless mainnet deployment
+
+set -e
+
+echo "========================================"
+echo "⚠️  MAINNET DEPLOYMENT with Paymaster"
+echo "========================================"
+echo ""
+read -p "Are you sure you want to deploy to MAINNET? (yes/no): " confirm
+if [ "$confirm" != "yes" ]; then
+    echo "Deployment cancelled"
+    exit 1
+fi
+
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Check required environment variables
+if [ -z "$WALLET_PRIVATE_KEY" ]; then
+    echo "Error: WALLET_PRIVATE_KEY not set in .env"
+    exit 1
+fi
+
+PAYMASTER_ADDRESS="0x98546B226dbbA8230cf620635a1e4ab01F6A99B2"
+RPC_URL="https://rpc.sophon.xyz"
+VERIFIER_URL="https://explorer.sophon.xyz/api"
+MAINNET_USDC="0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F"
+
+echo "Using Paymaster: $PAYMASTER_ADDRESS"
+echo "Using USDC: $MAINNET_USDC"
+echo ""
+
+# Deploy Store implementation
+echo "Deploying Store implementation..."
+STORE_IMPL=$(forge create src/StoreV2.sol:StoreV2 \
+    --rpc-url $RPC_URL \
+    --private-key $WALLET_PRIVATE_KEY \
+    --zksync \
+    --zk-paymaster-address $PAYMASTER_ADDRESS \
+    --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
+    --verify \
+    --verifier-url $VERIFIER_URL \
+    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
+    2>&1 | grep "Deployed to:" | awk '{print $3}')
+
+echo "Store implementation deployed to: $STORE_IMPL"
+
+# Deploy Jobs implementation
+echo "Deploying Jobs implementation..."
+JOBS_IMPL=$(forge create src/JobsV2.sol:JobsV2 \
+    --rpc-url $RPC_URL \
+    --private-key $WALLET_PRIVATE_KEY \
+    --zksync \
+    --zk-paymaster-address $PAYMASTER_ADDRESS \
+    --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
+    --verify \
+    --verifier-url $VERIFIER_URL \
+    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
+    2>&1 | grep "Deployed to:" | awk '{print $3}')
+
+echo "Jobs implementation deployed to: $JOBS_IMPL"
+
+# Get deployer address
+DEPLOYER=$(cast wallet address --private-key $WALLET_PRIVATE_KEY)
+
+# Prepare initialization data for Store proxy
+STORE_INIT_DATA=$(cast calldata "initialize(address,address,uint256)" $MAINNET_USDC $DEPLOYER 32000000)
+
+# Deploy Store proxy
+echo "Deploying Store proxy..."
+STORE_PROXY=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
+    --constructor-args $STORE_IMPL $STORE_INIT_DATA \
+    --rpc-url $RPC_URL \
+    --private-key $WALLET_PRIVATE_KEY \
+    --zksync \
+    --zk-paymaster-address $PAYMASTER_ADDRESS \
+    --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
+    --verify \
+    --verifier-url $VERIFIER_URL \
+    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
+    2>&1 | grep "Deployed to:" | awk '{print $3}')
+
+echo "Store proxy deployed to: $STORE_PROXY"
+
+# Prepare initialization data for Jobs proxy
+JOBS_INIT_DATA=$(cast calldata "initialize(address,address)" $MAINNET_USDC $DEPLOYER)
+
+# Deploy Jobs proxy
+echo "Deploying Jobs proxy..."
+JOBS_PROXY=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
+    --constructor-args $JOBS_IMPL $JOBS_INIT_DATA \
+    --rpc-url $RPC_URL \
+    --private-key $WALLET_PRIVATE_KEY \
+    --zksync \
+    --zk-paymaster-address $PAYMASTER_ADDRESS \
+    --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
+    --verify \
+    --verifier-url $VERIFIER_URL \
+    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
+    2>&1 | grep "Deployed to:" | awk '{print $3}')
+
+echo "Jobs proxy deployed to: $JOBS_PROXY"
+
+# Save deployment info
+cat > deployed-addresses-mainnet.txt << EOF
+# Sophon Mainnet Deployment
+STORE_PROXY=$STORE_PROXY
+STORE_IMPL=$STORE_IMPL
+JOBS_PROXY=$JOBS_PROXY
+JOBS_IMPL=$JOBS_IMPL
+USDC_ADDRESS=$MAINNET_USDC
+ADMIN=$DEPLOYER
+EOF
+
+# Update frontend env
+cat > frontend/.env.local << EOF
+# Auto-generated from deploy-mainnet-paymaster.sh
+NEXT_PUBLIC_STORE_CONTRACT=$STORE_PROXY
+NEXT_PUBLIC_JOBS_CONTRACT=$JOBS_PROXY
+NEXT_PUBLIC_USDC_ADDRESS=$MAINNET_USDC
+NEXT_PUBLIC_NETWORK=mainnet
+EOF
+
+echo "========================================"
+echo "✅ MAINNET Deployment Complete (Gasless with Paymaster)!"
+echo "========================================"
+echo ""
+echo "Deployed Contracts:"
+echo "  USDC: $MAINNET_USDC (official)"
+echo "  Store Proxy: $STORE_PROXY"
+echo "  Store Implementation: $STORE_IMPL"
+echo "  Jobs Proxy: $JOBS_PROXY"
+echo "  Jobs Implementation: $JOBS_IMPL"
+echo ""
+echo "Files updated:"
+echo "  - deployed-addresses-mainnet.txt"
+echo "  - frontend/.env.local"
+echo ""
+echo "⚠️  IMPORTANT POST-DEPLOYMENT STEPS:"
+echo "1. Grant marketing role to nano wallet:"
+echo "   cast send $STORE_PROXY \"grantRole(bytes32,address)\" \\"
+echo "     \$(cast keccak \"MARKETING_BUDGET_ROLE\") \\"
+echo "     YOUR_NANO_WALLET_ADDRESS \\"
+echo "     --private-key \$WALLET_PRIVATE_KEY"
+echo ""
+echo "2. Fund the Jobs contract with USDC for cat feeder payments"
+echo "3. Update frontend environment variables in production"

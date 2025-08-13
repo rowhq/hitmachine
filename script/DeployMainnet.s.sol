@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {StoreV2} from "../src/StoreV2.sol";
+import {JobsV2} from "../src/JobsV2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {TestExt} from "../lib/forge-zksync-std/src/TestExt.sol";
 
@@ -13,7 +14,7 @@ contract DeployMainnetScript is Script, TestExt {
     address constant MAINNET_USDC = 0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F;
     address constant MAINNET_PAYMASTER = 0x98546B226dbbA8230cf620635a1e4ab01F6A99B2;
 
-    function run() external returns (address storeProxy) {
+    function run() external returns (address storeProxy, address jobsProxy) {
         // Get configuration from environment
         uint256 deployerPrivateKey = vm.envUint("WALLET_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
@@ -42,6 +43,16 @@ contract DeployMainnetScript is Script, TestExt {
         ERC1967Proxy _storeProxy = new ERC1967Proxy(address(storeImpl), storeInitData);
         console.log("Store proxy deployed at:", address(_storeProxy));
 
+        // Deploy Jobs implementation
+        JobsV2 jobsImpl = new JobsV2();
+        console.log("Jobs implementation deployed at:", address(jobsImpl));
+
+        // Deploy Jobs proxy
+        bytes memory jobsInitData =
+            abi.encodeWithSelector(JobsV2.initialize.selector, usdcAddress, deployer);
+        ERC1967Proxy _jobsProxy = new ERC1967Proxy(address(jobsImpl), jobsInitData);
+        console.log("Jobs proxy deployed at:", address(_jobsProxy));
+
         vm.stopBroadcast();
 
         // Output deployment summary
@@ -52,12 +63,15 @@ contract DeployMainnetScript is Script, TestExt {
         console.log("USDC Address:", usdcAddress);
         console.log("Store Proxy:", address(_storeProxy));
         console.log("Store Implementation:", address(storeImpl));
+        console.log("Jobs Proxy:", address(_jobsProxy));
+        console.log("Jobs Implementation:", address(jobsImpl));
         console.log("Admin:", deployer);
         console.log("Initial Gift Card Price: 32 USDC");
         console.log("========================================");
         console.log("\nFrontend configuration:");
         console.log("[SUCCESS] Auto-updated frontend/.env.local with:");
         console.log("  NEXT_PUBLIC_STORE_CONTRACT=", address(_storeProxy));
+        console.log("  NEXT_PUBLIC_JOBS_CONTRACT=", address(_jobsProxy));
         console.log("  NEXT_PUBLIC_USDC_ADDRESS=", usdcAddress);
         console.log("========================================");
 
@@ -69,6 +83,12 @@ contract DeployMainnetScript is Script, TestExt {
             "\n",
             "STORE_IMPL=",
             vm.toString(address(storeImpl)),
+            "\n",
+            "JOBS_PROXY=",
+            vm.toString(address(_jobsProxy)),
+            "\n",
+            "JOBS_IMPL=",
+            vm.toString(address(jobsImpl)),
             "\n",
             "USDC_ADDRESS=",
             vm.toString(usdcAddress),
@@ -85,6 +105,9 @@ contract DeployMainnetScript is Script, TestExt {
             "NEXT_PUBLIC_STORE_CONTRACT=",
             vm.toString(address(_storeProxy)),
             "\n",
+            "NEXT_PUBLIC_JOBS_CONTRACT=",
+            vm.toString(address(_jobsProxy)),
+            "\n",
             "NEXT_PUBLIC_USDC_ADDRESS=",
             vm.toString(usdcAddress),
             "\n",
@@ -92,6 +115,6 @@ contract DeployMainnetScript is Script, TestExt {
         );
         vm.writeFile("frontend/.env.local", frontendEnv);
 
-        return address(_storeProxy);
+        return (address(_storeProxy), address(_jobsProxy));
     }
 }
