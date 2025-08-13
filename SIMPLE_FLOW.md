@@ -2,15 +2,15 @@
 
 ## Legal Entities
 
-### 🏢 **Nano LLC** (Referral Marketing Company)
-- **Owns**: Jobs Contract
-- **Business**: User acquisition and referral marketing
-- **Revenue**: Earns commissions from Album Sales LLC
+### Nano LLC (Referral Marketing Company)
+* Owns: Jobs Contract
+* Business: User acquisition and referral marketing
+* Revenue: Earns commissions from Album Sales LLC
 
-### 🏪 **Album Sales LLC** (E-commerce Company)
-- **Owns**: Store Contract  
-- **Business**: Sells digital albums
-- **Obligation**: Pays referral commissions to Nano LLC per agreement
+### Album Sales LLC (E-commerce Company)
+* Owns: Store Contract  
+* Business: Sells digital albums
+* Obligation: Pays referral commissions to Nano LLC per agreement
 
 ## Simple Flow Diagram
 
@@ -74,23 +74,23 @@ Store.claimReferralCommissions(jobsAddress, amount)
 
 ## Key Points
 
-- **32 USDC** = Standard amount throughout the system
-- **Two Companies**: Nano (referral) and Store (sales) with legal agreement
-- **Self-Sustaining**: After initial funding, commissions fund future operations
-- **Simple Flow**: Just 3 main contract calls in the cycle
+* 32 USDC = Standard amount throughout the system
+* Two Companies: Nano (referral) and Store (sales) with legal agreement
+* Self-Sustaining: After initial funding, commissions fund future operations
+* Simple Flow: Just 3 main contract calls in the cycle
 
 ## Contract Methods
 
 ### Jobs Contract
-- `payForJob(address worker)` - Pays 32 USDC to worker
-- `receiveFunds(uint256 amount)` - Accepts commission funds
+* `payForJob(address worker)` - Pays 32 USDC to worker
+* `receiveFunds(uint256 amount)` - Accepts commission funds
 
 ### Store Contract  
-- `buyAlbums()` - Purchases albums with available USDC
-- `claimReferralCommissions(address destination, uint256 amount)` - Nano claims commissions
+* `buyAlbums()` - Purchases albums with available USDC
+* `claimReferralCommissions(address destination, uint256 amount)` - Nano claims commissions
 
 ## Roles
 
-- **Nano**: Has `JOB_PAYER_ROLE` in Jobs, `COMMISSION_CLAIMER_ROLE` in Store
-- **Store Admin**: Separate entity, manages Store contract
-- **Users**: No special roles, just call `buyAlbums()`
+* Nano: Has `JOB_PAYER_ROLE` in Jobs, `COMMISSION_CLAIMER_ROLE` in Store
+* Store Admin: Separate entity, manages Store contract
+* Users: No special roles, just call `buyAlbums()`
