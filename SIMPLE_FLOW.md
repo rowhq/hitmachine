@@ -17,29 +17,20 @@
 ## Simple Flow Diagram
 
 ```mermaid
-flowchart TB
-    subgraph NanoLLC[Nano LLC - Referral Company]
-        NanoWallet[Nano Wallet]
-        JobsContract[Jobs Contract]
-    end
+sequenceDiagram
+    participant N as Nano Wallet
+    participant J as Jobs Contract
+    participant W as Worker
+    participant S as Store Contract
     
-    subgraph AlbumSalesLLC[Album Sales LLC]
-        StoreContract[Store Contract]
-    end
-    
-    Worker[Worker]
-    
-    NanoWallet ==>|1. Nano calls payForJob worker| JobsContract
-    JobsContract ==>|Jobs contract transfers 32 USDC to worker| Worker
-    Worker -->|2. Worker calls buyAlbums with 32 USDC| StoreContract
-    NanoWallet ==>|3. Nano calls claimReferralCommissions jobsAddress 32 USDC| StoreContract
-    StoreContract ==>|Store contract transfers 32 USDC to Jobs| JobsContract
-    JobsContract -.->|Jobs contract refunded and ready| JobsContract
-    
-    style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
-    style JobsContract fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style Worker fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    style StoreContract fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    Note over J: Has 32 USDC
+    N->>J: payForJob(worker)
+    J->>W: transfers 32 USDC
+    W->>S: buyAlbums() with 32 USDC
+    Note over S: Now has 32 USDC revenue
+    N->>S: claimReferralCommissions(jobsContract, 32)
+    S->>J: transfers 32 USDC commission
+    Note over J: Refunded with 32 USDC
 ```
 
 ## How It Works
