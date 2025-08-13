@@ -15,28 +15,40 @@
 ## Simple Flow Diagram
 
 ```mermaid
-graph LR
-    %% Entities
-    NANO["🏢 Nano LLC<br/>(Referral Company)"]
-    JOBS["📋 Jobs Contract<br/>(Owned by Nano LLC)"]
-    USER["👤 User<br/>(Album Buyer)"]
-    STORE["🏪 Store Contract<br/>(Owned by Album Sales LLC)"]
+graph TB
+    %% Main entities
+    subgraph "Nano LLC (Referral Company)"
+        NANO["🏢 Nano Wallet"]
+        JOBS["📋 Jobs Contract<br/>Pays Workers"]
+    end
     
-    %% Flow with method names
-    NANO -->|"1. Initial funding<br/>💰 32 USDC"| JOBS
-    NANO -->|"2. payForJob(worker)<br/>💰 32 USDC"| JOBS
-    JOBS -->|"3. Pays worker<br/>💰 32 USDC"| USER
-    USER -->|"4. buyAlbums()<br/>💰 32 USDC = 3200 albums"| STORE
-    STORE -->|"5. Revenue accumulates<br/>💰 32 USDC"| STORE
-    NANO -->|"6. claimReferralCommissions(jobs, 32)<br/>💰 32 USDC"| STORE
-    STORE -->|"7. Sends commission<br/>💰 32 USDC"| JOBS
-    JOBS -.->|"♻️ Cycle repeats"| NANO
+    subgraph "Album Sales LLC"
+        STORE["🏪 Store Contract<br/>Sells Albums"]
+    end
+    
+    USER["👤 User/Worker<br/>(Receives 32 USDC)"]
+    
+    %% The circular flow
+    NANO ==>|"1. Initial funding<br/>💰 32 USDC<br/>(one-time)"| JOBS
+    NANO -->|"2. payForJob(worker)"| JOBS
+    JOBS ==>|"3. Transfers<br/>💰 32 USDC"| USER
+    USER ==>|"4. buyAlbums()<br/>💰 32 USDC"| STORE
+    STORE -.->|"5. Revenue sits<br/>in Store"| STORE
+    NANO ==>|"6. claimReferralCommissions<br/>(jobs_address, 32)"| STORE
+    STORE ==>|"7. Sends commission<br/>💰 32 USDC"| JOBS
+    JOBS -.->|"8. Ready to pay<br/>next worker<br/>♻️ CYCLE CONTINUES"| NANO
+    
+    %% Highlight the circular path
+    JOBS -.->|"♻️"| NANO
     
     %% Styling
     style NANO fill:#ffebee,stroke:#c62828,stroke-width:3px
-    style JOBS fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style JOBS fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
     style USER fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    style STORE fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style STORE fill:#f3e5f5,stroke:#6a1b9a,stroke-width:3px
+    
+    classDef nanoClass fill:#ffebee,stroke:#c62828,stroke-width:3px
+    classDef storeClass fill:#f3e5f5,stroke:#6a1b9a,stroke-width:3px
 ```
 
 ## How It Works
@@ -69,8 +81,16 @@ Store.claimReferralCommissions(jobsAddress, amount)
 - Jobs contract now has funds for more workers
 
 ### 5️⃣ **Cycle Continues** ♻️
-- Jobs funded → Pay workers → Users buy albums → Claim commissions → Jobs funded
-- System becomes self-sustaining
+
+The circular flow:
+1. Nano LLC pays worker from Jobs contract (32 USDC)
+2. Worker buys albums from Store (32 USDC)
+3. Nano LLC claims commission from Store (32 USDC)
+4. Commission goes back to Jobs contract
+5. Jobs contract can now pay another worker
+6. **Circle complete - cycle repeats!**
+
+After initial funding, the system runs on commissions - no additional capital needed!
 
 ## Key Points
 
