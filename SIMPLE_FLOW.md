@@ -1,14 +1,26 @@
 # HitMachine - System Flow
 
+## Legal Entities
+
+### 🏢 **Nano LLC** (Referral Marketing Company)
+- **Owns**: Jobs Contract
+- **Business**: User acquisition and referral marketing
+- **Revenue**: Earns commissions from Album Sales LLC
+
+### 🏪 **Album Sales LLC** (E-commerce Company)
+- **Owns**: Store Contract  
+- **Business**: Sells digital albums
+- **Obligation**: Pays referral commissions to Nano LLC per agreement
+
 ## Simple Flow Diagram
 
 ```mermaid
 graph LR
     %% Entities
-    NANO["🏢 Nano<br/>(Referral Company)"]
-    JOBS["📋 Jobs Contract<br/>(Pays Workers)"]
+    NANO["🏢 Nano LLC<br/>(Referral Company)"]
+    JOBS["📋 Jobs Contract<br/>(Owned by Nano LLC)"]
     USER["👤 User<br/>(Album Buyer)"]
-    STORE["🏪 Store Contract<br/>(Sells Albums)"]
+    STORE["🏪 Store Contract<br/>(Owned by Album Sales LLC)"]
     
     %% Flow with method names
     NANO -->|"1. Initial funding<br/>💰 32 USDC"| JOBS
