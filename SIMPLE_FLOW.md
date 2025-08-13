@@ -18,7 +18,7 @@
 
 ```mermaid
 flowchart TB
-    subgraph NanoCompany[Nano LLC - Referral Company]
+    subgraph NanoCompany[Nano LLC Referral Company]
         NanoWallet[Nano Wallet]
         JobsContract[Jobs Contract]
     end
@@ -27,7 +27,7 @@ flowchart TB
         StoreContract[Store Contract]
     end
     
-    Worker[Worker/User]
+    Worker[Worker User]
     
     NanoWallet -->|1. Initial 32 USDC funding| JobsContract
     NanoWallet -->|2. payForJob| JobsContract
