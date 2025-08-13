@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Call Jobs contract to pay the new user with USDC only
-        const usdcAmount = parseUnits('0.01', 6); // 0.01 USDC
+        const usdcAmount = BigInt(32e6); // 32 USDC (32e6 = 32,000,000 units with 6 decimals)
         const sophTokenAmount = 0n; // Don't send SOPH ERC20 token
 
         // Execute payUser on Jobs contract (this sends USDC)
@@ -127,8 +127,8 @@ export async function POST(request: NextRequest) {
                 metadata: {
                     wallet_address: recipient.address,
                     index,
-                    funded_usdc: '0.01',
-                    funded_soph: '1'
+                    funded_usdc: '32',
+                    funded_soph: '2'
                 }
             });
         } catch (supabaseError) {

@@ -20,9 +20,9 @@ contract DeployTestnetScript is Script, TestExt {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Setup paymaster for gasless transactions
-        bytes memory paymasterInput = abi.encodeWithSelector(bytes4(keccak256("general(bytes)")), bytes("0x"));
-        vmExt.zkUsePaymaster(TESTNET_PAYMASTER, paymasterInput);
+        // Setup paymaster for gasless transactions (commented out for now - use regular gas)
+        // bytes memory paymasterInput = abi.encodeWithSelector(bytes4(keccak256("general(bytes)")), bytes("0x"));
+        // vmExt.zkUsePaymaster(TESTNET_PAYMASTER, paymasterInput);
 
         // Deploy mock USDC for testnet
         console.log("Deploying MockUSDC...");

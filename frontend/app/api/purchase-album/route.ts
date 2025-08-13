@@ -198,8 +198,8 @@ export async function POST(request: NextRequest) {
                 
                 console.log(`Wallet USDC balance: ${usdcBalance.toString()}`);
                 
-                // Try approving just the amount needed
-                const approvalAmount = parseUnits('0.02', 6); // Approve 0.02 USDC
+                // Approve infinite amount so user only needs to approve once
+                const approvalAmount = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'); // Max uint256
                 
                 console.log(`Approving ${approvalAmount.toString()} units (album price: ${albumPrice.toString()})`);
                 console.log(`Chain ID: ${config.chain.id}`);
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
             const purchaseTx = await walletClient.writeContract({
                 address: config.storeContract,
                 abi: storeAbi,
-                functionName: 'buyAlbum',
+                functionName: 'buyAlbums',
                 args: [],
                 chain: config.chain,
             });

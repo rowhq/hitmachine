@@ -6,6 +6,8 @@ out = "out"
 solc = "0.8.24"
 src = "src"
 via_ir = false
+fallback_oz = true
+mode = "3"
 
 [etherscan]
 sophon_testnet = {key = "${ETHERSCAN_SOPHON_API_KEY}", url = "https://explorer.testnet.sophon.xyz/api", chain = 531050104}
