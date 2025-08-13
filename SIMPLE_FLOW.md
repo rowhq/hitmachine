@@ -33,7 +33,7 @@ flowchart TB
     JobsContract ==>|Jobs contract transfers 32 USDC to worker| Worker
     Worker -->|2. Worker calls buyAlbums with 32 USDC| StoreContract
     NanoWallet ==>|3. Nano calls claimReferralCommissions jobsAddress 32 USDC| StoreContract
-    StoreContract ==>|Store transfers commission to Jobs| JobsContract
+    StoreContract ==>|Store contract transfers 32 USDC to Jobs| JobsContract
     JobsContract -.->|Jobs contract refunded and ready| JobsContract
     
     style NanoWallet fill:#ffebee,stroke:#c62828,stroke-width:2px
