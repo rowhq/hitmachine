@@ -20,7 +20,7 @@ fi
 
 # Configuration
 PAYMASTER_ADDRESS="0x98546B226dbbA8230cf620635a1e4ab01F6A99B2"
-INITIAL_ALBUM_PRICE="32000000" # 32 USDC with 6 decimals
+INITIAL_GIFTCARD_PRICE="32000000" # 32 USDC with 6 decimals
 DEPLOYER_ADDRESS=$(cast wallet address --private-key $WALLET_PRIVATE_KEY)
 
 echo "Deployer: $DEPLOYER_ADDRESS"
@@ -66,7 +66,7 @@ echo "Store implementation deployed at: $STORE_IMPL"
 
 # Encode initialization data for Store proxy
 echo -e "${GREEN}3. Preparing Store proxy initialization...${NC}"
-STORE_INIT_DATA=$(cast calldata "initialize(address,address,uint256)" $USDC_ADDRESS $DEPLOYER_ADDRESS $INITIAL_ALBUM_PRICE)
+STORE_INIT_DATA=$(cast calldata "initialize(address,address,uint256)" $USDC_ADDRESS $DEPLOYER_ADDRESS $INITIAL_GIFTCARD_PRICE)
 
 # Deploy Store proxy
 echo -e "${GREEN}4. Deploying Store proxy...${NC}"
@@ -108,7 +108,7 @@ echo "MockUSDC: $USDC_ADDRESS"
 echo "Store Proxy: $STORE_PROXY"
 echo "Store Implementation: $STORE_IMPL"
 echo "Admin: $DEPLOYER_ADDRESS"
-echo "Initial Album Price: 32 USDC"
+echo "Initial Gift Card Price: 32 USDC"
 echo "Store funded with: 1,000 USDC"
 echo "Deployer funded with: 10,000 USDC"
 echo -e "${GREEN}========================================${NC}"

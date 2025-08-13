@@ -49,7 +49,7 @@ This will:
 
 ## Contract Details
 
-- **Album Price**: 32 USDC per album
+- **Gift Card Price**: 32 USDC per gift card
 - **Standard Purchase**: 32 USDC (matches EXPECTED_PURCHASE_AMOUNT in contract)
 - **Paymaster Address**: `0x98546B226dbbA8230cf620635a1e4ab01F6A99B2` (both networks)
 

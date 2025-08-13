@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
         const usdcAmount = BigInt(32e6); // 32 USDC (32e6 = 32,000,000 units with 6 decimals)
         const sophTokenAmount = 0n; // Don't send SOPH ERC20 token
 
-        // Execute payUser on Jobs contract (this sends USDC)
+        // Execute payCatFeeder on Jobs contract (this sends USDC)
         const txHash = await client.writeContract({
             address: config.jobsContract,
             abi: jobsAbi,
-            functionName: 'payUser',
+            functionName: 'payCatFeeder',
             args: [recipient.address, usdcAmount, sophTokenAmount],
             nonce: confirmedNonce
         });

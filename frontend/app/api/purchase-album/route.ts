@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             transport: http(config.rpcUrl),
         });
 
-        // Check if album already purchased
+        // Check if gift card already purchased
         const hasPurchased = await publicClient.readContract({
             address: config.storeContract,
             abi: storeAbi,
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
         if (hasPurchased) {
             return NextResponse.json(
-                { error: 'Album already purchased' },
+                { error: 'Gift card already purchased' },
                 { status: 400, headers }
             );
         }
@@ -163,11 +163,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get the album price from the store contract
-        const albumPrice = await publicClient.readContract({
+        // Get the gift card price from the store contract
+        const giftcardPrice = await publicClient.readContract({
             address: config.storeContract,
             abi: storeAbi,
-            functionName: 'albumPrice',
+            functionName: 'giftcardPrice',
         }) as bigint;
 
         // Check current allowance
@@ -178,11 +178,11 @@ export async function POST(request: NextRequest) {
             args: [account.address, config.storeContract],
         }) as bigint;
 
-        console.log(`Current allowance: ${currentAllowance.toString()}, Album price: ${albumPrice.toString()}`);
+        console.log(`Current allowance: ${currentAllowance.toString()}, Gift card price: ${giftcardPrice.toString()}`);
 
         // If allowance is insufficient, approve the Store contract
-        if (currentAllowance < albumPrice) {
-            console.log(`Current allowance: ${currentAllowance.toString()}, needed: ${albumPrice.toString()}. Approving...`);
+        if (currentAllowance < giftcardPrice) {
+            console.log(`Current allowance: ${currentAllowance.toString()}, needed: ${giftcardPrice.toString()}. Approving...`);
             
             try {
                 console.log(`Attempting approval from ${account.address} to ${config.storeContract}`);
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
                 // Approve infinite amount so user only needs to approve once
                 const approvalAmount = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'); // Max uint256
                 
-                console.log(`Approving ${approvalAmount.toString()} units (album price: ${albumPrice.toString()})`);
+                console.log(`Approving ${approvalAmount.toString()} units (gift card price: ${giftcardPrice.toString()})`);
                 console.log(`Chain ID: ${config.chain.id}`);
                 console.log(`Wallet address: ${account.address}`);
                 
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
             const purchaseTx = await walletClient.writeContract({
                 address: config.storeContract,
                 abi: storeAbi,
-                functionName: 'buyAlbums',
+                functionName: 'buyGiftcard',
                 args: [],
                 chain: config.chain,
             });
@@ -281,13 +281,13 @@ export async function POST(request: NextRequest) {
             });
 
             return NextResponse.json({
-                message: 'Album purchased successfully',
+                message: 'Gift card purchased successfully',
                 buyer: account.address,
                 index,
                 txHash: purchaseTx,
                 blockNumber: receipt.blockNumber.toString(),
                 status: receipt.status,
-                approvalNeeded: currentAllowance < albumPrice
+                approvalNeeded: currentAllowance < giftcardPrice
             }, { headers });
         } catch (simulationError: any) {
             console.error('Transaction simulation failed:', simulationError.message || 'Unknown error');

@@ -8,7 +8,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {TestExt} from "../lib/forge-zksync-std/src/TestExt.sol";
 
 contract DeployTestnetScript is Script, TestExt {
-    uint256 constant INITIAL_ALBUM_PRICE = 32e6; // 32 USDC with 6 decimals
+    uint256 constant INITIAL_GIFTCARD_PRICE = 32e6; // 32 USDC with 6 decimals
     address constant TESTNET_PAYMASTER = 0x98546B226dbbA8230cf620635a1e4ab01F6A99B2;
 
     function run() external returns (address storeProxy, address mockUSDC) {
@@ -46,7 +46,7 @@ contract DeployTestnetScript is Script, TestExt {
 
         // Deploy Store proxy
         bytes memory storeInitData =
-            abi.encodeWithSelector(StoreV2.initialize.selector, usdcAddress, deployer, INITIAL_ALBUM_PRICE);
+            abi.encodeWithSelector(StoreV2.initialize.selector, usdcAddress, deployer, INITIAL_GIFTCARD_PRICE);
         ERC1967Proxy _storeProxy = new ERC1967Proxy(address(storeImpl), storeInitData);
         console.log("Store proxy deployed at:", address(_storeProxy));
 
@@ -61,7 +61,7 @@ contract DeployTestnetScript is Script, TestExt {
         console.log("Store Proxy:", address(_storeProxy));
         console.log("Store Implementation:", address(storeImpl));
         console.log("Admin:", deployer);
-        console.log("Initial Album Price: 32 USDC");
+        console.log("Initial Gift Card Price: 32 USDC");
         console.log("========================================");
         console.log("\nFrontend configuration:");
         console.log("[SUCCESS] Auto-updated frontend/.env.local with:");

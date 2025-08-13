@@ -19,11 +19,11 @@ contract StoreV2 is
     bytes32 public constant COMMISSION_CLAIMER_ROLE = keccak256("COMMISSION_CLAIMER_ROLE");
 
     IERC20 public usdc;
-    uint256 public albumPrice;
+    uint256 public giftcardPrice;
     uint256 public totalPurchases;
     uint256 public totalRevenue;
     
-    // Expected standard purchase amount (32 USDC = 4 albums @ $8 each)
+    // Expected standard purchase amount (32 USDC for gift card)
     uint256 public constant EXPECTED_PURCHASE_AMOUNT = 32 * 10**6; // 32 USDC
     
     // Promotional Commission Structure (tiered based on total commissions claimed)
@@ -35,10 +35,10 @@ contract StoreV2 is
     uint256 public constant PROMO_FIRST_TIER = 50_000_000 * 10**6; // $50M USDC at 100%
     uint256 public totalCommissionsClaimed;
 
-    event AlbumPurchased(address indexed buyer, uint256 price);
+    event GiftcardPurchased(address indexed buyer, uint256 price);
     event PriceUpdated(uint256 oldPrice, uint256 newPrice);
     event FundsWithdrawn(address indexed to, uint256 amount);
-    event ReferralCommissionsClaimed(address indexed claimedBy, address indexed sentTo, uint256 amount, uint256 commissionRate);
+    event MarketingCommissionsClaimed(address indexed claimedBy, address indexed sentTo, uint256 amount, uint256 commissionRate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -55,7 +55,7 @@ contract StoreV2 is
         __Pausable_init();
 
         usdc = IERC20(_usdc);
-        albumPrice = _initialPrice; // Should be 8 * 10**6 for $8 albums
+        giftcardPrice = _initialPrice; // Should be 32 * 10**6 for $32 gift card
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE, _admin);
@@ -64,35 +64,35 @@ contract StoreV2 is
         // Note: COMMISSION_CLAIMER_ROLE should be granted to nano wallet separately
     }
 
-    function buyAlbums() external whenNotPaused {
-        // Calculate how many albums can be purchased with user's approved USDC
+    function buyGiftcard() external whenNotPaused {
+        // Calculate how many gift cards can be purchased with user's approved USDC
         uint256 userAllowance = usdc.allowance(msg.sender, address(this));
         uint256 userBalance = usdc.balanceOf(msg.sender);
         uint256 availableAmount = userAllowance < userBalance ? userAllowance : userBalance;
         
-        require(availableAmount >= albumPrice, "Insufficient funds or allowance");
+        require(availableAmount >= giftcardPrice, "Insufficient funds or allowance");
         
-        // Calculate number of albums to purchase
-        uint256 albumCount = availableAmount / albumPrice;
-        uint256 totalCost = albumCount * albumPrice;
+        // Calculate number of gift cards to purchase
+        uint256 giftcardCount = availableAmount / giftcardPrice;
+        uint256 totalCost = giftcardCount * giftcardPrice;
         
-        require(albumCount > 0, "Cannot purchase zero albums");
+        require(giftcardCount > 0, "Cannot purchase zero gift cards");
         require(usdc.transferFrom(msg.sender, address(this), totalCost), "Payment failed");
 
-        totalPurchases += albumCount;
+        totalPurchases += giftcardCount;
         totalRevenue += totalCost;
 
-        emit AlbumPurchased(msg.sender, totalCost);
+        emit GiftcardPurchased(msg.sender, totalCost);
     }
     
-    // Helper function to calculate how many albums for a given amount
-    function calculateAlbumCount(uint256 usdcAmount) external view returns (uint256) {
-        return usdcAmount / albumPrice;
+    // Helper function to calculate how many gift cards for a given amount
+    function calculateGiftcardCount(uint256 usdcAmount) external view returns (uint256) {
+        return usdcAmount / giftcardPrice;
     }
     
-    // Check if standard amount would buy expected albums
-    function getExpectedAlbumCount() external view returns (uint256) {
-        return EXPECTED_PURCHASE_AMOUNT / albumPrice;
+    // Check if standard amount would buy expected gift cards
+    function getExpectedGiftcardCount() external view returns (uint256) {
+        return EXPECTED_PURCHASE_AMOUNT / giftcardPrice;
     }
 
     // Admin withdrawal function
@@ -129,8 +129,8 @@ contract StoreV2 is
         return (balance * rate) / 100;
     }
     
-    // Nano wallet claims referral commissions per the promotional agreement
-    function claimReferralCommissions(address destination, uint256 amount) external onlyRole(COMMISSION_CLAIMER_ROLE) {
+    // Nano wallet claims marketing commissions per the promotional agreement
+    function payMarketing(address destination, uint256 amount) external onlyRole(COMMISSION_CLAIMER_ROLE) {
         require(destination != address(0), "Invalid destination");
         require(amount > 0, "Amount must be greater than 0");
         
@@ -142,10 +142,10 @@ contract StoreV2 is
         uint256 rate = getCurrentCommissionRate();
         
         require(usdc.transfer(destination, amount), "Commission transfer failed");
-        emit ReferralCommissionsClaimed(msg.sender, destination, amount, rate);
+        emit MarketingCommissionsClaimed(msg.sender, destination, amount, rate);
     }
 
-    function claimAllReferralCommissions(address destination) external onlyRole(COMMISSION_CLAIMER_ROLE) {
+    function payAllMarketing(address destination) external onlyRole(COMMISSION_CLAIMER_ROLE) {
         uint256 claimable = getClaimableCommission();
         require(claimable > 0, "No commissions to claim at current tier");
         require(destination != address(0), "Invalid destination");
@@ -154,7 +154,7 @@ contract StoreV2 is
         uint256 rate = getCurrentCommissionRate();
         
         require(usdc.transfer(destination, claimable), "Commission transfer failed");
-        emit ReferralCommissionsClaimed(msg.sender, destination, claimable, rate);
+        emit MarketingCommissionsClaimed(msg.sender, destination, claimable, rate);
     }
 
     function withdrawAll(address to) external onlyRole(WITHDRAWER_ROLE) {
@@ -168,8 +168,8 @@ contract StoreV2 is
 
     function updatePrice(uint256 newPrice) external onlyRole(OPERATOR_ROLE) {
         require(newPrice > 0, "Price must be greater than 0");
-        uint256 oldPrice = albumPrice;
-        albumPrice = newPrice;
+        uint256 oldPrice = giftcardPrice;
+        giftcardPrice = newPrice;
         emit PriceUpdated(oldPrice, newPrice);
     }
 
@@ -187,7 +187,7 @@ contract StoreV2 is
     }
 
     function getStats() external view returns (uint256 price, uint256 purchases, uint256 revenue, uint256 balance) {
-        return (albumPrice, totalPurchases, totalRevenue, usdc.balanceOf(address(this)));
+        return (giftcardPrice, totalPurchases, totalRevenue, usdc.balanceOf(address(this)));
     }
 
     function canBuy(address buyer) external view returns (bool) {
