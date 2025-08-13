@@ -10,7 +10,9 @@ echo "========================================"
 
 # Load environment variables
 if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+    set -a
+    source .env
+    set +a
 fi
 
 # Check required environment variables
@@ -20,107 +22,133 @@ if [ -z "$WALLET_PRIVATE_KEY" ]; then
 fi
 
 PAYMASTER_ADDRESS="0x98546B226dbbA8230cf620635a1e4ab01F6A99B2"
-RPC_URL="https://rpc.testnet.sophon.xyz"
+RPC_URL="${SOPHON_TESTNET_RPC_URL:-https://rpc.testnet.sophon.xyz}"
 VERIFIER_URL="https://explorer.testnet.sophon.xyz/api"
 
 echo "Using Paymaster: $PAYMASTER_ADDRESS (gasless deployment)"
+echo "Using RPC: $RPC_URL"
+echo ""
+
+# Get deployer address
+DEPLOYER=$(cast wallet address --private-key $WALLET_PRIVATE_KEY)
+echo "Deployer: $DEPLOYER"
 echo ""
 
 # Deploy MockUSDC
 echo "Deploying MockUSDC..."
-MOCK_USDC=$(forge create src/MockUSDC.sol:MockUSDC \
+MOCK_USDC_OUTPUT=$(forge create src/MockUSDC.sol:MockUSDC \
     --rpc-url $RPC_URL \
     --private-key $WALLET_PRIVATE_KEY \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --verify \
-    --verifier-url $VERIFIER_URL \
-    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
-    2>&1 | grep "Deployed to:" | awk '{print $3}')
+    2>&1)
 
+MOCK_USDC=$(echo "$MOCK_USDC_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
+if [ -z "$MOCK_USDC" ]; then
+    echo "Failed to deploy MockUSDC"
+    echo "Output: $MOCK_USDC_OUTPUT"
+    exit 1
+fi
 echo "MockUSDC deployed to: $MOCK_USDC"
 
 # Deploy Store implementation
+echo ""
 echo "Deploying Store implementation..."
-STORE_IMPL=$(forge create src/StoreV2.sol:StoreV2 \
+STORE_IMPL_OUTPUT=$(forge create src/StoreV2.sol:StoreV2 \
     --rpc-url $RPC_URL \
     --private-key $WALLET_PRIVATE_KEY \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --verify \
-    --verifier-url $VERIFIER_URL \
-    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
-    2>&1 | grep "Deployed to:" | awk '{print $3}')
+    2>&1)
 
+STORE_IMPL=$(echo "$STORE_IMPL_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
+if [ -z "$STORE_IMPL" ]; then
+    echo "Failed to deploy Store implementation"
+    echo "Output: $STORE_IMPL_OUTPUT"
+    exit 1
+fi
 echo "Store implementation deployed to: $STORE_IMPL"
 
 # Deploy Jobs implementation
+echo ""
 echo "Deploying Jobs implementation..."
-JOBS_IMPL=$(forge create src/JobsV2.sol:JobsV2 \
+JOBS_IMPL_OUTPUT=$(forge create src/JobsV2.sol:JobsV2 \
     --rpc-url $RPC_URL \
     --private-key $WALLET_PRIVATE_KEY \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --verify \
-    --verifier-url $VERIFIER_URL \
-    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
-    2>&1 | grep "Deployed to:" | awk '{print $3}')
+    2>&1)
 
+JOBS_IMPL=$(echo "$JOBS_IMPL_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
+if [ -z "$JOBS_IMPL" ]; then
+    echo "Failed to deploy Jobs implementation"
+    echo "Output: $JOBS_IMPL_OUTPUT"
+    exit 1
+fi
 echo "Jobs implementation deployed to: $JOBS_IMPL"
 
-# Get deployer address
-DEPLOYER=$(cast wallet address --private-key $WALLET_PRIVATE_KEY)
-
 # Prepare initialization data for Store proxy
+echo ""
+echo "Preparing Store proxy initialization..."
 STORE_INIT_DATA=$(cast calldata "initialize(address,address,uint256)" $MOCK_USDC $DEPLOYER 32000000)
 
 # Deploy Store proxy
 echo "Deploying Store proxy..."
-STORE_PROXY=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
+STORE_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
     --constructor-args $STORE_IMPL $STORE_INIT_DATA \
     --rpc-url $RPC_URL \
     --private-key $WALLET_PRIVATE_KEY \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --verify \
-    --verifier-url $VERIFIER_URL \
-    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
-    2>&1 | grep "Deployed to:" | awk '{print $3}')
+    2>&1)
 
+STORE_PROXY=$(echo "$STORE_PROXY_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
+if [ -z "$STORE_PROXY" ]; then
+    echo "Failed to deploy Store proxy"
+    echo "Output: $STORE_PROXY_OUTPUT"
+    exit 1
+fi
 echo "Store proxy deployed to: $STORE_PROXY"
 
 # Prepare initialization data for Jobs proxy
+echo ""
+echo "Preparing Jobs proxy initialization..."
 JOBS_INIT_DATA=$(cast calldata "initialize(address,address)" $MOCK_USDC $DEPLOYER)
 
 # Deploy Jobs proxy
 echo "Deploying Jobs proxy..."
-JOBS_PROXY=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
+JOBS_PROXY_OUTPUT=$(forge create lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy \
     --constructor-args $JOBS_IMPL $JOBS_INIT_DATA \
     --rpc-url $RPC_URL \
     --private-key $WALLET_PRIVATE_KEY \
     --zksync \
     --zk-paymaster-address $PAYMASTER_ADDRESS \
     --zk-paymaster-input $(cast calldata "general(bytes)" "0x") \
-    --verify \
-    --verifier-url $VERIFIER_URL \
-    --etherscan-api-key $ETHERSCAN_SOPHON_API_KEY \
-    2>&1 | grep "Deployed to:" | awk '{print $3}')
+    2>&1)
 
+JOBS_PROXY=$(echo "$JOBS_PROXY_OUTPUT" | grep -oE 'Deployed to: 0x[a-fA-F0-9]{40}' | cut -d' ' -f3)
+if [ -z "$JOBS_PROXY" ]; then
+    echo "Failed to deploy Jobs proxy"
+    echo "Output: $JOBS_PROXY_OUTPUT"
+    exit 1
+fi
 echo "Jobs proxy deployed to: $JOBS_PROXY"
 
 # Mint test USDC
-echo "Minting test USDC..."
+echo ""
+echo "Minting test USDC to deployer..."
 cast send $MOCK_USDC "mintTo(address,uint256)" $DEPLOYER 10000000000 \
     --private-key $WALLET_PRIVATE_KEY \
-    --rpc-url $RPC_URL
+    --rpc-url $RPC_URL > /dev/null 2>&1
 
+echo "Minting test USDC to Jobs contract..."
 cast send $MOCK_USDC "mintTo(address,uint256)" $JOBS_PROXY 10000000000 \
     --private-key $WALLET_PRIVATE_KEY \
-    --rpc-url $RPC_URL
+    --rpc-url $RPC_URL > /dev/null 2>&1
 
 # Save deployment info
 cat > deployed-addresses-testnet.txt << EOF
@@ -142,13 +170,21 @@ NEXT_PUBLIC_USDC_ADDRESS=$MOCK_USDC
 NEXT_PUBLIC_NETWORK=testnet
 EOF
 
+echo ""
 echo "========================================"
-echo "Deployment Complete!"
+echo "✅ Deployment Complete (Gasless with Paymaster)!"
 echo "========================================"
 echo ""
-echo "Contract addresses saved to:"
+echo "Deployed Contracts:"
+echo "  MockUSDC: $MOCK_USDC"
+echo "  Store Proxy: $STORE_PROXY"
+echo "  Store Implementation: $STORE_IMPL"
+echo "  Jobs Proxy: $JOBS_PROXY"
+echo "  Jobs Implementation: $JOBS_IMPL"
+echo ""
+echo "Files updated:"
 echo "  - deployed-addresses-testnet.txt"
-echo "  - frontend/.env.local (auto-updated)"
+echo "  - frontend/.env.local"
 echo ""
 echo "To grant marketing role to nano wallet:"
 echo "  source deployed-addresses-testnet.txt"
