@@ -46,7 +46,7 @@ contract StoreV2 is
         __Pausable_init();
 
         usdc = IERC20(_usdc);
-        albumPrice = _initialPrice;
+        albumPrice = _initialPrice; // Should be 8 * 10**6 for $8 albums
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE, _admin);

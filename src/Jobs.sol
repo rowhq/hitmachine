@@ -30,7 +30,6 @@ contract Jobs is
     uint256 public totalJobsPaid;
 
     event JobPaymentSent(address indexed worker, uint256 usdcAmount, uint256 timestamp);
-    event FundsReceived(address indexed from, uint256 usdcAmount); // When receiving commission funds from Store
     event EmergencyWithdraw(address indexed to, address token, uint256 amount);
     event StandardAmountUpdated(uint256 oldAmount, uint256 newAmount);
 
@@ -82,14 +81,6 @@ contract Jobs is
         uint256 oldAmount = standardJobAmount;
         standardJobAmount = newAmount;
         emit StandardAmountUpdated(oldAmount, newAmount);
-    }
-
-    // Receives funds (typically commission payouts from Store contract)
-    function receiveFunds(uint256 usdcAmount) external {
-        require(usdcAmount > 0, "Amount must be greater than 0");
-        require(usdc.transferFrom(msg.sender, address(this), usdcAmount), "USDC transfer failed");
-        
-        emit FundsReceived(msg.sender, usdcAmount);
     }
 
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyRole(ADMIN_ROLE) {

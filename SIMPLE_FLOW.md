@@ -68,9 +68,9 @@ Jobs.payForJob(workerAddress)
 ```solidity
 Store.buyAlbums()
 ```
-- Users (workers) call this with their 32 USDC
-- Automatically purchases 3200 albums (at 0.01 USDC each)
-- Revenue accumulates in Store contract
+* Users (workers) call this with their 32 USDC
+* Automatically purchases 4 albums (at 8 USDC each)
+* Revenue accumulates in Store contract
 
 ### 4️⃣ **Commission Claim**
 ```solidity
@@ -84,7 +84,7 @@ Store.claimReferralCommissions(jobsAddress, amount)
 
 The circular flow:
 1. Nano LLC pays worker from Jobs contract (32 USDC)
-2. Worker buys albums from Store (32 USDC)
+2. Worker buys 4 albums from Store (32 USDC = 4 albums @ $8 each)
 3. Nano LLC claims commission from Store (32 USDC)
 4. Commission goes back to Jobs contract
 5. Jobs contract can now pay another worker
@@ -103,7 +103,6 @@ After initial funding, the system runs on commissions - no additional capital ne
 
 ### Jobs Contract
 * `payForJob(address worker)` - Pays 32 USDC to worker
-* `receiveFunds(uint256 amount)` - Accepts commission funds
 
 ### Store Contract  
 * `buyAlbums()` - Purchases albums with available USDC
