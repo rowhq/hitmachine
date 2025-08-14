@@ -1,0 +1,32 @@
+[profile.default]
+libs = ["lib"]
+optimizer = true
+optimizer_runs = 200
+out = "zkout"
+solc = "0.8.24"
+src = "src"
+via_ir = false
+fallback_oz = true
+mode = "3"
+
+# zkSync specific settings
+zk_optimization = true
+zk_solc_version = "1.5.15"
+is_system = false
+force_evmla = false
+
+[etherscan]
+sophon_testnet = { key = "${ETHERSCAN_SOPHON_API_KEY}", url = "https://explorer.testnet.sophon.xyz/api", chain = 531050104 }
+sophon_mainnet = { key = "${ETHERSCAN_SOPHON_API_KEY}", url = "https://explorer.sophon.xyz/api", chain = 50104 }
+
+[rpc_endpoints]
+localhost = "http://127.0.0.1:8545"
+sophonMainnet = "${SOPHON_MAINNET_RPC_URL}"
+sophonTestnet = "${SOPHON_TESTNET_RPC_URL}"
+
+# zkSync compiler remappings
+[zk_remappings]
+"@openzeppelin/" = "lib/openzeppelin-contracts/"
+"@openzeppelin-upgradeable/" = "lib/openzeppelin-contracts-upgradeable/"
+"forge-std/" = "lib/forge-std/src/"
+"forge-zksync-std/" = "lib/forge-zksync-std/src/"

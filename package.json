@@ -6,9 +6,23 @@
     "build": "forge build",
     "test": "forge test",
     "extract-abis": "./scripts/extract-abis.sh",
-    "deploy:testnet": "./deploy-testnet.sh"
+    "deploy:testnet": "./deploy-testnet.sh",
+    "verify": "tsx scripts/verify-contracts-no-api-key.ts",
+    "verify:test": "tsx scripts/verify-contracts-no-api-key.ts --test",
+    "verify:simple": "./scripts/verify-simple.sh",
+    "verify:old": "tsx scripts/verify-contracts.ts"
   },
-  "keywords": ["blockchain", "sophon", "foundry", "solidity"],
+  "keywords": [
+    "blockchain",
+    "sophon",
+    "foundry",
+    "solidity"
+  ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "dotenv": "^17.2.1",
+    "tsx": "^4.20.4"
+  }
 }

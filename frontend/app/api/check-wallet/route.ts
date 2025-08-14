@@ -5,8 +5,8 @@ import usdcAbi from '../../abi/mockUsdc.json';
 import { corsHeaders } from '../cors';
 
 const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
-const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad') as `0x${string}`;
-const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520') as `0x${string}`;
+const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f') as `0x${string}`; // MockUSDC
+const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x86E1D788FFCd8232D85dD7eB02c508e7021EB474') as `0x${string}`; // NanoMusicStore Proxy
 
 export async function OPTIONS(request: NextRequest) {
     return new NextResponse(null, { status: 200, headers: corsHeaders() });

@@ -4,42 +4,25 @@ import { useEffect, useState } from 'react';
 import { useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import { config } from '../config';
-import storeAbi from '../abi/storeV2.json';
-import jobsAbi from '../abi/jobsV2.json';
+import storeAbi from '../abi/nanoMusicStore.json';
+import jobsAbi from '../abi/nanoAnimalCare.json';
 
 export default function ContractStats() {
   const [apiStats, setApiStats] = useState<any>(null);
 
-  // Store stats
-  const { data: storeBalance } = useReadContract({
+  // Store stats - use getStats which returns all info
+  const { data: storeStats } = useReadContract({
     address: config.STORE_CONTRACT,
     abi: storeAbi,
-    functionName: 'getContractBalance',
-  });
-
-  const { data: totalSales } = useReadContract({
-    address: config.STORE_CONTRACT,
-    abi: storeAbi,
-    functionName: 'totalSales',
-  });
-
-  const { data: albumPrice } = useReadContract({
-    address: config.STORE_CONTRACT,
-    abi: storeAbi,
-    functionName: 'albumPrice',
-  });
-
-  // Jobs stats
-  const { data: jobsBalances } = useReadContract({
-    address: config.JOBS_CONTRACT,
-    abi: jobsAbi,
-    functionName: 'getBalances',
-  });
-
-  const { data: jobsStats } = useReadContract({
-    address: config.JOBS_CONTRACT,
-    abi: jobsAbi,
     functionName: 'getStats',
+  }) as { data: [bigint, bigint, bigint, bigint] | undefined };
+  // Returns: [giftcardPrice, totalPurchases, totalRevenue, balance]
+
+  // Jobs/AnimalCare stats - only has getUSDCBalance
+  const { data: jobsBalance } = useReadContract({
+    address: config.JOBS_CONTRACT,
+    abi: jobsAbi,
+    functionName: 'getUSDCBalance',
   });
 
   // Fetch API stats
@@ -68,40 +51,32 @@ export default function ContractStats() {
           <div>
             <p className="text-sm text-gray-500">Balance</p>
             <p className="text-xl font-bold">
-              ${storeBalance ? formatUnits(storeBalance as bigint, 6) : '0'} USDC
+              ${storeStats ? formatUnits(storeStats[3], 6) : '0'} USDC
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Sales</p>
-            <p className="text-lg font-semibold">{totalSales?.toString() || '0'}</p>
+            <p className="text-sm text-gray-500">Total Purchases</p>
+            <p className="text-lg font-semibold">{storeStats ? storeStats[1].toString() : '0'}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Album Price</p>
-            <p className="text-lg">${albumPrice ? formatUnits(albumPrice as bigint, 6) : '0'} USDC</p>
+            <p className="text-sm text-gray-500">Gift Card Price</p>
+            <p className="text-lg">${storeStats ? formatUnits(storeStats[0], 6) : '0'} USDC</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Total Revenue</p>
+            <p className="text-lg">${storeStats ? formatUnits(storeStats[2], 6) : '0'} USDC</p>
           </div>
         </div>
       </div>
 
       {/* Jobs Stats */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-700">Jobs Contract</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-700">Animal Care Contract</h3>
         <div className="space-y-2">
           <div>
             <p className="text-sm text-gray-500">USDC Balance</p>
             <p className="text-xl font-bold">
-              ${jobsBalances ? formatUnits((jobsBalances as any)[0], 6) : '0'} USDC
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Users Paid</p>
-            <p className="text-lg font-semibold">
-              {jobsStats ? (jobsStats as any)[0].toString() : '0'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Total Distributed</p>
-            <p className="text-lg">
-              ${jobsStats ? formatUnits((jobsStats as any)[1], 6) : '0'} USDC
+              ${jobsBalance ? formatUnits(jobsBalance as bigint, 6) : '0'} USDC
             </p>
           </div>
         </div>

@@ -4,15 +4,20 @@ import {
     createWalletClient,
     createPublicClient,
     http,
-    parseUnits
+    parseUnits,
+    type Hex
 } from 'viem';
+import { getGeneralPaymasterInput } from 'viem/zksync';
 import { sophonTestnet, sophonMainnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import { createClient } from '@supabase/supabase-js';
-import jobsAbi from '../../abi/jobsV2.json';
+import usdcAbi from '../../abi/mockUsdc.json';
+import storeAbi from '../../abi/nanoMusicStore.json';
+import animalCareAbi from '../../abi/nanoAnimalCare.json';
 import { corsHeaders } from '../cors';
 
 const MNEMONIC = process.env.MNEMONIC!;
+const PAYMASTER_ADDRESS = '0x98546B226dbbA8230cf620635a1e4ab01F6A99B2' as `0x${string}`;
 
 // Determine network from query parameter
 function getNetworkConfig(request: NextRequest) {
@@ -22,14 +27,18 @@ function getNetworkConfig(request: NextRequest) {
     if (isTestnet) {
         return {
             chain: sophonTestnet,
-            jobsContract: (process.env.NEXT_PUBLIC_TESTNET_JOBS_CONTRACT || '0x935f8Fd143720B337c521354a545a342DF584D18') as `0x${string}`,
+            storeContract: (process.env.NEXT_PUBLIC_TESTNET_STORE_CONTRACT || '0x86E1D788FFCd8232D85dD7eB02c508e7021EB474') as `0x${string}`, // NanoMusicStore Proxy
+            animalCareContract: (process.env.NEXT_PUBLIC_TESTNET_JOBS_CONTRACT || '0xAAfD6b707770BC9F60A773405dE194348B6C4392') as `0x${string}`, // NanoAnimalCare Proxy
+            usdcAddress: (process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS || '0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f') as `0x${string}`, // MockUSDC
             rpcUrl: 'https://rpc.testnet.sophon.xyz',
             network: 'testnet'
         };
     } else {
         return {
             chain: sophonMainnet,
-            jobsContract: (process.env.NEXT_PUBLIC_MAINNET_JOBS_CONTRACT || process.env.NEXT_PUBLIC_JOBS_CONTRACT || '') as `0x${string}`,
+            storeContract: (process.env.NEXT_PUBLIC_MAINNET_STORE_CONTRACT || process.env.NEXT_PUBLIC_STORE_CONTRACT || '') as `0x${string}`,
+            animalCareContract: (process.env.NEXT_PUBLIC_MAINNET_JOBS_CONTRACT || process.env.NEXT_PUBLIC_JOBS_CONTRACT || '') as `0x${string}`,
+            usdcAddress: (process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS || process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F') as `0x${string}`,
             rpcUrl: process.env.MAINNET_RPC_URL || 'https://rpc.sophon.xyz',
             network: 'mainnet'
         };
@@ -89,32 +98,53 @@ export async function POST(request: NextRequest) {
             blockTag: 'latest'
         });
 
-        // Call Jobs contract to pay the new user with USDC only
-        const usdcAmount = BigInt(32e6); // 32 USDC (32e6 = 32,000,000 units with 6 decimals)
-        const sophTokenAmount = 0n; // Don't send SOPH ERC20 token
+        // Get the gift card price from the store contract
+        const giftcardPrice = await publicClient.readContract({
+            address: config.storeContract,
+            abi: storeAbi,
+            functionName: 'giftcardPrice',
+        }) as bigint;
 
-        // Execute payCatFeeder on Jobs contract (this sends USDC)
-        const txHash = await client.writeContract({
-            address: config.jobsContract,
-            abi: jobsAbi,
+        // Prepare paymaster input
+        const paymasterInput: Hex = getGeneralPaymasterInput({
+            innerInput: "0x"
+        });
+
+        // Call payCatFeeder on the NanoAnimalCare contract to send USDC to the new wallet
+        const payTx = await client.writeContract({
+            address: config.animalCareContract,
+            abi: animalCareAbi,
             functionName: 'payCatFeeder',
-            args: [recipient.address, usdcAmount, sophTokenAmount],
-            nonce: confirmedNonce
+            args: [recipient.address, giftcardPrice, BigInt(0)], // Send gift card amount in USDC, 0 native tokens
+            nonce: confirmedNonce,
+            paymaster: PAYMASTER_ADDRESS,
+            paymasterInput: paymasterInput
         });
 
-        // Wait for transaction confirmation
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+        // Wait for payment confirmation
+        const payReceipt = await publicClient.waitForTransactionReceipt({ hash: payTx });
 
-        // Send 2 native SOPH for gas fees directly (enough for approval + purchase)
-        const gasAmount = parseUnits('2', 18); // 2 native SOPH for gas
-        const gasTxHash = await client.sendTransaction({
-            to: recipient.address,
-            value: gasAmount,
-            nonce: confirmedNonce + 1
+        // Now approve the Store contract to spend USDC for the recipient
+        // We need to do this from the recipient's wallet
+        const recipientClient = createWalletClient({
+            account: recipient,
+            chain: config.chain,
+            transport: http(config.rpcUrl)
         });
 
-        // Wait for gas transaction confirmation
-        const gasReceipt = await publicClient.waitForTransactionReceipt({ hash: gasTxHash });
+        // Approve the Store contract to spend USDC (max amount so they only approve once)
+        const approvalAmount = BigInt(2) ** BigInt(256) - BigInt(1); // Max uint256
+        const approveTx = await recipientClient.writeContract({
+            address: config.usdcAddress,
+            abi: usdcAbi,
+            functionName: 'approve',
+            args: [config.storeContract, approvalAmount],
+            paymaster: PAYMASTER_ADDRESS,
+            paymasterInput: paymasterInput
+        });
+
+        // Wait for approval confirmation
+        const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveTx });
 
         // Store address => index mapping in KV
         await kv.set(`wallet_address_to_index:${recipient.address.toLowerCase()}`, index);
@@ -128,7 +158,7 @@ export async function POST(request: NextRequest) {
                     wallet_address: recipient.address,
                     index,
                     funded_usdc: '32',
-                    funded_soph: '2'
+                    funded_soph: '0.1'
                 }
             });
         } catch (supabaseError) {
@@ -150,14 +180,15 @@ export async function POST(request: NextRequest) {
             message: 'Account created and funded',
             address: recipient.address,
             index,
-            txHash,
-            gasTxHash,
+            payTx: payTx.toString(),
+            approveTx: approveTx.toString(),
             fundedWith: {
-                usdc: '0.01 USDC (from Jobs contract)',
-                soph: '2 SOPH (native for gas)'
+                usdc: '32 USDC (from Jobs contract - for gift card purchase)',
+                soph: '0 SOPH (not needed - paymaster covers all gas)'
             },
-            jobsContract: config.jobsContract,
-            status: receipt.status === 'success' && gasReceipt.status === 'success' ? 'success' : 'failed'
+            storeContract: config.storeContract,
+            usdcAddress: config.usdcAddress,
+            status: payReceipt.status === 'success' && approveReceipt.status === 'success' ? 'success' : 'failed'
         }, { headers });
     } catch (err: any) {
         console.error('Generate account error:', err);

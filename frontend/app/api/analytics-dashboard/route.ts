@@ -3,13 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
 import { sophonTestnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
-import storeAbi from '../../abi/storeV2.json';
-import jobsAbi from '../../abi/jobsV2.json';
+import storeAbi from '../../abi/nanoMusicStore.json';
+import jobsAbi from '../../abi/nanoAnimalCare.json';
 import { corsHeaders } from '../cors';
 
-const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x9af4b8A05B001A7dCbfD428C444f73Ff7d10d520') as `0x${string}`;
-const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0x935f8Fd143720B337c521354a545a342DF584D18') as `0x${string}`;
-const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad') as `0x${string}`;
+const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x86E1D788FFCd8232D85dD7eB02c508e7021EB474') as `0x${string}`; // NanoMusicStore Proxy
+const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0xAAfD6b707770BC9F60A773405dE194348B6C4392') as `0x${string}`; // NanoAnimalCare Proxy
+const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f') as `0x${string}`; // MockUSDC
 const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
 
 // Initialize Supabase client
@@ -34,11 +34,9 @@ export async function GET(request: NextRequest) {
         // Get blockchain data
         const [
             totalPurchases,
-            albumPrice,
+            giftcardPrice,
             storeBalance,
-            totalClaimed,
-            totalUsdcDistributed,
-            totalUsersPaid
+            jobsBalance
         ] = await Promise.all([
             publicClient.readContract({
                 address: STORE_CONTRACT,
@@ -48,7 +46,7 @@ export async function GET(request: NextRequest) {
             publicClient.readContract({
                 address: STORE_CONTRACT,
                 abi: storeAbi,
-                functionName: 'albumPrice',
+                functionName: 'giftcardPrice',
             }) as Promise<bigint>,
             publicClient.readContract({
                 address: STORE_CONTRACT,
@@ -58,17 +56,7 @@ export async function GET(request: NextRequest) {
             publicClient.readContract({
                 address: JOBS_CONTRACT,
                 abi: jobsAbi,
-                functionName: 'totalClaimedFromStore',
-            }) as Promise<bigint>,
-            publicClient.readContract({
-                address: JOBS_CONTRACT,
-                abi: jobsAbi,
-                functionName: 'totalUsdcDistributed',
-            }) as Promise<bigint>,
-            publicClient.readContract({
-                address: JOBS_CONTRACT,
-                abi: jobsAbi,
-                functionName: 'totalUsersPaid',
+                functionName: 'getUSDCBalance',
             }) as Promise<bigint>,
         ]);
 
@@ -89,8 +77,8 @@ export async function GET(request: NextRequest) {
         let ipTrackingData = {
             uniqueVisitors: 0,
             totalPageViews: 0,
-            topCountries: [],
-            recentVisits: []
+            topCountries: [] as { country: string; count: number }[],
+            recentVisits: [] as { ip: string; country: string; city: string; timestamp: string }[]
         };
 
         try {
@@ -140,18 +128,16 @@ export async function GET(request: NextRequest) {
         }).filter(Boolean) || [];
 
         // Calculate revenue metrics
-        const totalRevenue = Number(totalPurchases) * Number(albumPrice) / 1e6; // Convert to USDC
+        const totalRevenue = Number(totalPurchases) * Number(giftcardPrice) / 1e6; // Convert to USDC
         const averageRevenuePerWallet = totalWalletsGenerated ? totalRevenue / Number(totalWalletsGenerated) : 0;
 
         return NextResponse.json({
             blockchain: {
-                totalAlbumsSold: totalPurchases.toString(),
-                albumPrice: (Number(albumPrice) / 1e6).toFixed(2) + ' USDC',
+                totalGiftcardsSold: totalPurchases.toString(),
+                giftcardPrice: (Number(giftcardPrice) / 1e6).toFixed(2) + ' USDC',
                 totalRevenue: totalRevenue.toFixed(2) + ' USDC',
                 storeBalance: (Number(storeBalance) / 1e6).toFixed(2) + ' USDC',
-                totalClaimedByJobs: (Number(totalClaimed) / 1e6).toFixed(2) + ' USDC',
-                totalDistributed: (Number(totalUsdcDistributed) / 1e6).toFixed(2) + ' USDC',
-                totalUsersPaid: totalUsersPaid.toString()
+                jobsBalance: (Number(jobsBalance) / 1e6).toFixed(2) + ' USDC',
             },
             wallets: {
                 totalGenerated: totalWalletsGenerated || 0,

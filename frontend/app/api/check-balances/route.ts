@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, formatUnits } from 'viem';
 import { sophonTestnet } from '../../config/chains';
-import jobsAbi from '../../abi/jobsV2.json';
-import storeAbi from '../../abi/storeV2.json';
+import jobsAbi from '../../abi/nanoAnimalCare.json';
+import storeAbi from '../../abi/nanoMusicStore.json';
 import { corsHeaders } from '../cors';
 
 const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`;

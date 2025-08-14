@@ -4,13 +4,11 @@ import { useState, useEffect } from 'react';
 
 interface Analytics {
   blockchain: {
-    totalAlbumsSold: string;
-    albumPrice: string;
+    totalGiftcardsSold: string;
+    giftcardPrice: string;
     totalRevenue: string;
     storeBalance: string;
-    totalClaimedByJobs: string;
-    totalDistributed: string;
-    totalUsersPaid: string;
+    jobsBalance: string;
   };
   wallets: {
     totalGenerated: number;
@@ -109,8 +107,8 @@ export default function AnalyticsDashboard() {
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4">
-          <p className="text-sm opacity-90">Total Albums Sold</p>
-          <p className="text-2xl font-bold">{analytics.blockchain.totalAlbumsSold}</p>
+          <p className="text-sm opacity-90">Gift Cards Sold</p>
+          <p className="text-2xl font-bold">{analytics.blockchain.totalGiftcardsSold}</p>
         </div>
         
         <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4">
@@ -134,24 +132,20 @@ export default function AnalyticsDashboard() {
         <h3 className="text-lg font-semibold mb-4">💰 Financial Metrics</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <p className="text-gray-600">Album Price</p>
-            <p className="font-medium">{analytics.blockchain.albumPrice}</p>
+            <p className="text-gray-600">Gift Card Price</p>
+            <p className="font-medium">{analytics.blockchain.giftcardPrice}</p>
           </div>
           <div>
             <p className="text-gray-600">Store Balance</p>
             <p className="font-medium">{analytics.blockchain.storeBalance}</p>
           </div>
           <div>
-            <p className="text-gray-600">Jobs Claimed</p>
-            <p className="font-medium">{analytics.blockchain.totalClaimedByJobs}</p>
+            <p className="text-gray-600">Jobs Balance</p>
+            <p className="font-medium">{analytics.blockchain.jobsBalance}</p>
           </div>
           <div>
-            <p className="text-gray-600">Total Distributed</p>
-            <p className="font-medium">{analytics.blockchain.totalDistributed}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Users Paid</p>
-            <p className="font-medium">{analytics.blockchain.totalUsersPaid}</p>
+            <p className="text-gray-600">Total Sold</p>
+            <p className="font-medium">{analytics.blockchain.totalGiftcardsSold}</p>
           </div>
           <div>
             <p className="text-gray-600">Avg Revenue/Wallet</p>

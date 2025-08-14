@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, formatUnits } from 'viem';
 import { sophonTestnet } from '../../config/chains';
-import storeAbi from '../../abi/storeV2.json';
-import jobsAbi from '../../abi/jobsV2.json';
+import storeAbi from '../../abi/nanoMusicStore.json';
+import jobsAbi from '../../abi/nanoAnimalCare.json';
 import { corsHeaders } from '../cors';
 
-const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x86E1D788FFCd8232D85dD7eB02c508e7021EB474') as `0x${string}`; // NanoMusicStore Proxy
+const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0xAAfD6b707770BC9F60A773405dE194348B6C4392') as `0x${string}`; // NanoAnimalCare Proxy
 const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
 
 export async function OPTIONS(request: NextRequest) {
@@ -31,43 +31,33 @@ export async function GET(request: NextRequest) {
       transport: http(RPC_URL)
     });
 
-    // Get Store stats
-    const [storeStats, storeBalance] = await Promise.all([
-      publicClient.readContract({
-        address: STORE_CONTRACT,
-        abi: storeAbi,
-        functionName: 'getStats'
-      }) as Promise<[bigint, bigint, bigint, bigint]>,
-      publicClient.readContract({
-        address: STORE_CONTRACT,
-        abi: storeAbi,
-        functionName: 'getContractBalance'
-      }) as Promise<bigint>
-    ]);
+    // Get Store stats using getStats function which returns all info
+    const storeStats = await publicClient.readContract({
+      address: STORE_CONTRACT,
+      abi: storeAbi,
+      functionName: 'getStats'
+    }) as [bigint, bigint, bigint, bigint];
+    // getStats returns: (giftcardPrice, totalPurchases, totalRevenue, balance)
 
-    // Get Jobs stats
-    const jobsStats = await publicClient.readContract({
+    // Get Jobs/AnimalCare balance - NanoAnimalCare doesn't have getStats
+    const jobsBalance = await publicClient.readContract({
       address: JOBS_CONTRACT,
       abi: jobsAbi,
-      functionName: 'getStats'
-    }) as [bigint, bigint, bigint, bigint, bigint, bigint];
+      functionName: 'getUSDCBalance'
+    }) as bigint;
 
     // Format the data
     const analytics = {
       store: {
-        albumPrice: formatUnits(storeStats[0], 6),
+        giftcardPrice: formatUnits(storeStats[0], 6),
         totalPurchases: storeStats[1].toString(),
         totalRevenue: formatUnits(storeStats[2], 6),
-        currentBalance: formatUnits(storeBalance, 6),
+        currentBalance: formatUnits(storeStats[3], 6), // balance is the 4th value from getStats
         contractAddress: STORE_CONTRACT
       },
       jobs: {
-        usersPaid: jobsStats[0].toString(),
-        usdcDistributed: formatUnits(jobsStats[1], 6),
-        nativeDistributed: formatUnits(jobsStats[2], 18),
-        claimedFromStore: formatUnits(jobsStats[3], 6),
-        currentUsdcBalance: formatUnits(jobsStats[4], 6),
-        currentNativeBalance: formatUnits(jobsStats[5], 18),
+        // NanoAnimalCare has limited stats - just balance
+        currentUsdcBalance: formatUnits(jobsBalance, 6),
         contractAddress: JOBS_CONTRACT
       },
       network: {
@@ -87,17 +77,13 @@ export async function GET(request: NextRequest) {
         message: 'Contracts not deployed yet',
         mockData: true,
         store: {
-          albumPrice: '0.01',
+          giftcardPrice: '32',
           totalPurchases: '0',
           totalRevenue: '0',
           currentBalance: '0',
           contractAddress: STORE_CONTRACT
         },
         jobs: {
-          usersPaid: '0',
-          usdcDistributed: '0',
-          nativeDistributed: '0',
-          claimedFromStore: '0',
           currentUsdcBalance: '0',
           currentNativeBalance: '0',
           contractAddress: JOBS_CONTRACT
