@@ -1,48 +1,6 @@
-import { defineChain } from 'viem';
-
-export const sophonMainnet = defineChain({
-  id: 50104,
-  name: 'Sophon',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Sophon',
-    symbol: 'SOPH',
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://rpc.sophon.xyz'],
-    },
-  },
-  blockExplorers: {
-    default: { 
-      name: 'Sophon Explorer', 
-      url: 'https://explorer.sophon.xyz' 
-    },
-  },
-  testnet: false,
-});
-
-export const sophonTestnet = defineChain({
-  id: 531050104,
-  name: 'Sophon Testnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Sophon',
-    symbol: 'SOPH',
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://rpc.testnet.sophon.xyz'],
-    },
-  },
-  blockExplorers: {
-    default: { 
-      name: 'Sophon Explorer', 
-      url: 'https://explorer.testnet.sophon.xyz' 
-    },
-  },
-  testnet: true,
-});
+// Import official Sophon chain definitions from viem
+// These include the proper zkSync configuration and EIP-712 domain
+export { sophon as sophonMainnet, sophonTestnet } from 'viem/chains';
 
 // Token addresses on Sophon Testnet
 export const USDC_ADDRESS_TESTNET = '0x10Af06Bb43F5ed51A289d22641135c6fC97987Ad'; // Mock USDC on testnet
