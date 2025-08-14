@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mnemonicToAccount } from "viem/accounts";
 import { createWalletClient, createPublicClient, http, parseUnits, type Hex } from "viem";
-import { getGeneralPaymasterInput } from 'viem/zksync';
+import { getGeneralPaymasterInput, eip712WalletActions } from 'viem/zksync';
 import { sophonTestnet, sophonMainnet } from "../../config/chains";
 import { kv } from "@vercel/kv";
 import storeAbi from "../../abi/nanoMusicStore.json";
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       account,
       chain: config.chain,
       transport: http(config.rpcUrl),
-    });
+    }).extend(eip712WalletActions());
 
     // Get the gift card price from the store contract
     const giftcardPrice = (await publicClient.readContract({
@@ -231,27 +231,18 @@ export async function POST(request: NextRequest) {
       console.log(`Purchase tx sent: ${purchaseTx}`);
       transactions.push({ type: 'purchase', hash: purchaseTx });
 
-      // Wait for all transactions to be confirmed
-      const receipts = await Promise.all(
-        transactions.map(tx => 
-          publicClient.waitForTransactionReceipt({ hash: tx.hash })
-        )
-      );
-
-      // Check if all transactions succeeded
-      const allSuccessful = receipts.every(r => r.status === 'success');
-
+      // Don't wait for confirmations - return immediately
+      // Find the purchase transaction hash for the UI
+      const purchaseTxObj = transactions.find(t => t.type === 'purchase');
+      
       return NextResponse.json(
         {
-          message: allSuccessful ? "Gift card purchased successfully" : "Transaction failed",
+          message: "Gift card purchase transactions sent",
           buyer: account.address,
           index,
           transactions: transactions,
-          receipts: receipts.map(r => ({
-            blockNumber: r.blockNumber.toString(),
-            status: r.status,
-            transactionHash: r.transactionHash
-          })),
+          txHash: purchaseTxObj?.hash, // Main transaction hash for UI
+          status: 'pending', // Transactions are pending, not confirmed
           approvalNeeded: currentAllowance < giftcardPrice,
         },
         { headers }

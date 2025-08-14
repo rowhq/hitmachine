@@ -81,21 +81,44 @@ export default function PurchaseGiftcard() {
 
         {result && (
           <div className="p-3 bg-green-50 border border-green-200 rounded">
-            <p className="text-sm text-green-800 font-medium">✅ Gift Card Purchased Successfully!</p>
+            <p className="text-sm text-green-800 font-medium">✅ Gift Card Purchase Transactions Sent!</p>
             <div className="mt-2 text-xs space-y-1">
-              <p><strong>Transaction:</strong> {result.txHash?.slice(0, 10)}...{result.txHash?.slice(-8)}</p>
               <p><strong>Buyer:</strong> {result.buyer}</p>
               {result.index !== undefined && (
                 <p><strong>Wallet Index:</strong> {result.index}</p>
               )}
-              <a 
-                href={`${config.EXPLORER_URL}/tx/${result.txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline inline-block mt-2"
-              >
-                View on Explorer →
-              </a>
+              {result.transactions && result.transactions.length > 0 && (
+                <div className="mt-2">
+                  <p className="font-medium">Transactions:</p>
+                  {result.transactions.map((tx: any, idx: number) => (
+                    <div key={idx} className="mt-1">
+                      <span className="capitalize">{tx.type}:</span>{' '}
+                      <a 
+                        href={`${config.EXPLORER_URL}/tx/${tx.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {tx.hash?.slice(0, 10)}...{tx.hash?.slice(-8)}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Fallback for single transaction display */}
+              {!result.transactions && result.txHash && (
+                <>
+                  <p><strong>Transaction:</strong> {result.txHash?.slice(0, 10)}...{result.txHash?.slice(-8)}</p>
+                  <a 
+                    href={`${config.EXPLORER_URL}/tx/${result.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline inline-block mt-2"
+                  >
+                    View on Explorer →
+                  </a>
+                </>
+              )}
             </div>
           </div>
         )}

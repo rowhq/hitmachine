@@ -16,29 +16,9 @@ import {
 } from '@rainbow-me/rainbowkit/wallets';
 import { WagmiProvider } from 'wagmi';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { defineChain } from 'viem';
 
-// Import testnet config
-import { sophonTestnet } from './config/chains';
-
-// Use mainnet for production, testnet for development
-const sophonMainnet = defineChain({
-  id: 50104,
-  name: 'Sophon Mainnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Sophon',
-    symbol: 'SOPH',
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://rpc.sophon.xyz'],
-    },
-  },
-  blockExplorers: {
-    default: { name: 'Explorer', url: 'https://explorer.sophon.xyz' },
-  },
-});
+// Import both testnet and mainnet configs
+import { sophonTestnet, sophonMainnet } from './config/chains';
 
 // Use testnet by default, can switch to mainnet in production
 const isMainnet = process.env.NEXT_PUBLIC_NETWORK === 'mainnet';

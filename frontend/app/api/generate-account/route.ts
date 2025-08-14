@@ -165,14 +165,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`PayCatFeeder transaction sent: ${payTx}`);
 
-    // Wait for payment confirmation
-    const payReceipt = await publicClient.waitForTransactionReceipt({
-      hash: payTx,
-    });
-    console.log(
-      `PayCatFeeder transaction receipt status: ${payReceipt.status}`
-    );
-
     // Now approve the Store contract to spend USDC for the recipient
     // We need to do this from the recipient's wallet
     const recipientClient = createWalletClient({
@@ -198,14 +190,6 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(`Approval transaction sent: ${approveTx}`);
-
-    // Wait for approval confirmation
-    const approveReceipt = await publicClient.waitForTransactionReceipt({
-      hash: approveTx,
-    });
-    console.log(
-      `Approval transaction receipt status: ${approveReceipt.status}`
-    );
 
     // Store address => index mapping in KV
     await kv.set(
@@ -256,10 +240,7 @@ export async function POST(request: NextRequest) {
         },
         storeContract: config.storeContract,
         usdcAddress: config.usdcAddress,
-        status:
-          payReceipt.status === "success" && approveReceipt.status === "success"
-            ? "success"
-            : "failed",
+        status: "pending", // Transactions are pending, not confirmed
       },
       { headers }
     );

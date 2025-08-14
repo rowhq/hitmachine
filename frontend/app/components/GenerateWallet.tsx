@@ -76,29 +76,43 @@ export default function GenerateWallet() {
           <div className="space-y-2">
             <h3 className="font-medium">Transactions:</h3>
             <div className="text-sm space-y-1">
-              <div>
-                <span className="text-gray-600">USDC from Jobs:</span>{' '}
-                <a href={`https://explorer.testnet.sophon.xyz/tx/${result.txHash}`} 
-                   target="_blank" 
-                   rel="noopener noreferrer" 
-                   className="text-blue-600 hover:underline">
-                  {result.txHash?.slice(0, 10)}...{result.txHash?.slice(-8)}
-                </a>
-              </div>
-              {result.gasTxHash && (
+              {result.payTx && (
                 <div>
-                  <span className="text-gray-600">SOPH for gas:</span>{' '}
-                  <a href={`https://explorer.testnet.sophon.xyz/tx/${result.gasTxHash}`} 
+                  <span className="text-gray-600">USDC Payment:</span>{' '}
+                  <a href={`https://explorer.testnet.sophon.xyz/tx/${result.payTx}`} 
                      target="_blank" 
                      rel="noopener noreferrer" 
                      className="text-blue-600 hover:underline">
-                    {result.gasTxHash?.slice(0, 10)}...{result.gasTxHash?.slice(-8)}
+                    {result.payTx?.slice(0, 10)}...{result.payTx?.slice(-8)}
+                  </a>
+                </div>
+              )}
+              {result.approveTx && (
+                <div>
+                  <span className="text-gray-600">USDC Approval:</span>{' '}
+                  <a href={`https://explorer.testnet.sophon.xyz/tx/${result.approveTx}`} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     className="text-blue-600 hover:underline">
+                    {result.approveTx?.slice(0, 10)}...{result.approveTx?.slice(-8)}
+                  </a>
+                </div>
+              )}
+              {/* Fallback for old response format */}
+              {!result.payTx && result.txHash && (
+                <div>
+                  <span className="text-gray-600">Transaction:</span>{' '}
+                  <a href={`https://explorer.testnet.sophon.xyz/tx/${result.txHash}`} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     className="text-blue-600 hover:underline">
+                    {result.txHash?.slice(0, 10)}...{result.txHash?.slice(-8)}
                   </a>
                 </div>
               )}
             </div>
             <div className="text-xs text-gray-600 mt-2">
-              Funded from Jobs Contract: {result.jobsContract?.slice(0, 10)}...{result.jobsContract?.slice(-8)}
+              Funded from Jobs Contract: {result.animalCareContract || result.jobsContract || config.JOBS_CONTRACT}
             </div>
           </div>
         </div>
