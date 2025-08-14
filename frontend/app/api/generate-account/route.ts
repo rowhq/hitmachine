@@ -72,15 +72,10 @@ export async function POST(request: NextRequest) {
     // Get network configuration
     const config = getNetworkConfig(request);
 
-    console.log(
-      `Generate account request - Network: ${config.network}, Chain ID: ${config.chain.id}`
-    );
-    console.log(
-      `Using contracts - Store: ${config.storeContract}, AnimalCare: ${config.animalCareContract}`
-    );
-    console.log(
-      `Using USDC: ${config.usdcAddress}, Paymaster: ${PAYMASTER_ADDRESS}`
-    );
+    // Log only essential info in production
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Generate account - Network: ${config.network}`);
+    }
 
     // Get IP address for basic tracking
     const ip =
@@ -88,6 +83,21 @@ export async function POST(request: NextRequest) {
       request.headers.get("x-real-ip") ||
       request.headers.get("cf-connecting-ip") ||
       "unknown";
+
+    // Simple rate limiting - 10 requests per second per IP
+    const rateLimitKey = `rate:${ip}:${Math.floor(Date.now() / 1000)}`;
+    const requests = await kv.incr(rateLimitKey);
+    await kv.expire(rateLimitKey, 2); // Expire after 2 seconds
+    
+    if (requests > 10) {
+      return NextResponse.json(
+        { 
+          error: "Rate limit exceeded. Please try again in a moment.",
+          retryAfter: 1
+        },
+        { status: 429, headers }
+      );
+    }
 
     const indexKey = `wallet_index_${config.network}`;
     const index = (await kv.get(indexKey)) || 0;
@@ -104,9 +114,6 @@ export async function POST(request: NextRequest) {
     const distributor = privateKeyToAccount(
       `0x${process.env.WALLET_PRIVATE_KEY!}`
     );
-
-    console.log(`Distributor wallet: ${distributor.address}`);
-    console.log(`New recipient wallet: ${recipient.address} (index: ${index})`);
 
     const client = createWalletClient({
       account: distributor,
@@ -125,30 +132,15 @@ export async function POST(request: NextRequest) {
       blockTag: "pending",
     });
 
-    // Get the gift card price from the store contract
-    const giftcardPrice = (await publicClient.readContract({
-      address: config.storeContract,
-      abi: storeAbi,
-      functionName: "giftcardPrice",
-    })) as bigint;
-
-    console.log(
-      `Gift card price: ${giftcardPrice.toString()} (${
-        Number(giftcardPrice) / 1e6
-      } USDC)`
-    );
+    // Hardcoded gift card price to avoid contract reads
+    const giftcardPrice = BigInt(32000000); // 32 USDC (with 6 decimals)
 
     // Prepare paymaster input
     const paymasterInput: Hex = getGeneralPaymasterInput({
       innerInput: "0x",
     });
 
-    console.log(`Paymaster input: ${paymasterInput}`);
-
     // Call payCatFeeder on the NanoAnimalCare contract to send USDC to the new wallet
-    console.log(
-      `Sending payCatFeeder transaction with nonce ${confirmedNonce}...`
-    );
     const payTx = await client.writeContract({
       address: config.animalCareContract,
       abi: animalCareAbi,
@@ -163,8 +155,6 @@ export async function POST(request: NextRequest) {
       // maxPriorityFeePerGas: BigInt(1000000) // 0.001 gwei
     });
 
-    console.log(`PayCatFeeder transaction sent: ${payTx}`);
-
     // Now approve the Store contract to spend USDC for the recipient
     // We need to do this from the recipient's wallet
     const recipientClient = createWalletClient({
@@ -175,7 +165,6 @@ export async function POST(request: NextRequest) {
 
     // Approve the Store contract to spend USDC (max amount so they only approve once)
     const approvalAmount = BigInt(2) ** BigInt(256) - BigInt(1); // Max uint256
-    console.log(`Sending approval transaction from recipient wallet...`);
     const approveTx = await recipientClient.writeContract({
       address: config.usdcAddress,
       abi: usdcAbi,
@@ -188,8 +177,6 @@ export async function POST(request: NextRequest) {
     //   maxFeePerGas: BigInt(250000000), // 0.25 gwei
     //   maxPriorityFeePerGas: BigInt(1000000), // 0.001 gwei
     });
-
-    console.log(`Approval transaction sent: ${approveTx}`);
 
     // Store address => index mapping in KV
     await kv.set(

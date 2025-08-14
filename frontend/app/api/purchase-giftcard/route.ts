@@ -135,12 +135,8 @@ export async function POST(request: NextRequest) {
       transport: http(config.rpcUrl),
     }).extend(eip712WalletActions());
 
-    // Get the gift card price from the store contract
-    const giftcardPrice = (await publicClient.readContract({
-      address: config.storeContract,
-      abi: storeAbi,
-      functionName: "giftcardPrice",
-    })) as bigint;
+    // Hardcoded gift card price to avoid contract reads
+    const giftcardPrice = BigInt(32000000); // 32 USDC (with 6 decimals)
 
     // Get the nonce for the wallet
     const nonce = await publicClient.getTransactionCount({
