@@ -2,7 +2,7 @@
 
 ## Clawback Cron Job
 
-The clawback cron job runs every 30 minutes to reclaim USDC from funded wallets when system liquidity is low.
+The clawback cron job runs every minute to reclaim USDC from funded wallets when system liquidity is low.
 
 ### Configuration
 
@@ -11,7 +11,7 @@ The clawback cron job runs every 30 minutes to reclaim USDC from funded wallets 
    CRON_SECRET=your-secret-key-here
    ```
 
-2. The cron job will automatically run every 30 minutes
+2. The cron job will automatically run every minute
 
 ### How it works
 
