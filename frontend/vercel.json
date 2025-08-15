@@ -14,12 +14,19 @@
     },
     "app/api/cron/refill-jobs/route.ts": {
       "maxDuration": 10
+    },
+    "app/api/cron/clawback/route.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [
     {
       "path": "/api/cron/refill-jobs",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/clawback",
+      "schedule": "*/30 * * * *"
     }
   ],
   "headers": [
