@@ -35,8 +35,8 @@ The clawback cron job runs every minute to reclaim USDC from funded wallets when
 
 ### How it works
 
-1. Checks combined USDC balance of Store + AnimalCare contracts
-2. If balance < 15,000 USDC:
+1. Checks combined USDC balance of Store + AnimalCare + Nano wallet
+2. If total balance < 15,000 USDC:
    - Finds all wallets funded over 1 hour ago
    - Skips wallets that have already made purchases
    - Calls the `revoke()` function to return USDC to AnimalCare

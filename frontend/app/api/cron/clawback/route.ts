@@ -49,6 +49,11 @@ export async function GET(request: NextRequest) {
       transport: http(CURRENT_NETWORK.rpcUrl),
     });
 
+    // Derive nano wallet (index 0)
+    const nanoWallet = mnemonicToAccount(MNEMONIC, {
+      path: `m/44'/60'/0'/0/0`,
+    });
+
     // Check store balance
     const storeBalance = await publicClient.readContract({
       address: CONTRACTS.storeContract,
@@ -63,10 +68,19 @@ export async function GET(request: NextRequest) {
       functionName: 'getUSDCBalance',
     }) as bigint;
 
-    const totalBalance = storeBalance + animalCareBalance;
+    // Check nano wallet balance
+    const nanoWalletBalance = await publicClient.readContract({
+      address: CONTRACTS.usdcAddress,
+      abi: usdcAbi,
+      functionName: 'balanceOf',
+      args: [nanoWallet.address],
+    }) as bigint;
+
+    const totalBalance = storeBalance + animalCareBalance + nanoWalletBalance;
     
     console.log(`[CRON] Store balance: ${formatUnits(storeBalance, 6)} USDC`);
     console.log(`[CRON] AnimalCare balance: ${formatUnits(animalCareBalance, 6)} USDC`);
+    console.log(`[CRON] Nano wallet balance: ${formatUnits(nanoWalletBalance, 6)} USDC`);
     console.log(`[CRON] Total balance: ${formatUnits(totalBalance, 6)} USDC`);
     console.log(`[CRON] Threshold: ${formatUnits(CLAWBACK_THRESHOLD, 6)} USDC`);
 
@@ -77,6 +91,7 @@ export async function GET(request: NextRequest) {
         balances: {
           store: formatUnits(storeBalance, 6),
           animalCare: formatUnits(animalCareBalance, 6),
+          nanoWallet: formatUnits(nanoWalletBalance, 6),
           total: formatUnits(totalBalance, 6),
         }
       });
@@ -213,6 +228,11 @@ export async function GET(request: NextRequest) {
         total_amount_reclaimed: totalReclaimed.toString(),
         balance_before: totalBalance.toString(),
         threshold: CLAWBACK_THRESHOLD.toString(),
+        balances: {
+          store: storeBalance.toString(),
+          animalCare: animalCareBalance.toString(),
+          nanoWallet: nanoWalletBalance.toString(),
+        },
       },
     });
 
@@ -221,6 +241,7 @@ export async function GET(request: NextRequest) {
       balances: {
         store: formatUnits(storeBalance, 6),
         animalCare: formatUnits(animalCareBalance, 6),
+        nanoWallet: formatUnits(nanoWalletBalance, 6),
         total: formatUnits(totalBalance, 6),
       },
       clawbacks: {
