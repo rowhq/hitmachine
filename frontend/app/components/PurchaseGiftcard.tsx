@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 import { config } from '../config';
-import { GIFT_CARD_PRICE_DISPLAY } from '../config/contracts';
+import { useGiftCardPrice } from '../hooks/useGiftCardPrice';
 
 export default function PurchaseGiftcard() {
   const [walletAddress, setWalletAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+  
+  // Read gift card price from chain
+  const { displayPrice, isLoading: isPriceLoading } = useGiftCardPrice();
 
   const handlePurchase = async () => {
     if (!walletAddress) {
@@ -62,7 +65,7 @@ export default function PurchaseGiftcard() {
             disabled={isLoading}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Enter the wallet address that will purchase the gift card (must have {GIFT_CARD_PRICE_DISPLAY} USDC)
+            Enter the wallet address that will purchase the gift card (must have {displayPrice} USDC)
           </p>
         </div>
 
@@ -71,7 +74,7 @@ export default function PurchaseGiftcard() {
           disabled={isLoading || !walletAddress}
           className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Processing...' : `Purchase Gift Card (${GIFT_CARD_PRICE_DISPLAY} USDC)`}
+          {isLoading ? 'Processing...' : `Purchase Gift Card (${displayPrice} USDC)`}
         </button>
 
         {error && (
