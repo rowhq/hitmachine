@@ -17,6 +17,9 @@
     },
     "app/api/cron/clawback/route.ts": {
       "maxDuration": 30
+    },
+    "app/api/cron/fund-management/route.ts": {
+      "maxDuration": 10
     }
   },
   "crons": [
@@ -26,6 +29,10 @@
     },
     {
       "path": "/api/cron/clawback",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/fund-management",
       "schedule": "* * * * *"
     }
   ],

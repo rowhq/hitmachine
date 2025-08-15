@@ -1,5 +1,25 @@
 # Cron Jobs
 
+## Fund Management Cron Job
+
+The fund management cron job runs every minute to manage funds between contracts and the nano wallet (index 0).
+
+### How it works
+
+1. **Store Withdrawal**: If Store contract has > 3,000 USDC:
+   - Withdraws excess funds to nano wallet (index 0)
+   - Leaves 100 USDC in the store for operations
+   - Uses `claimOwnerCommissionMarketing()` function
+
+2. **AnimalCare Refill**: If AnimalCare contract has < 10,000 USDC:
+   - Nano wallet sends USDC to refill to 10,000
+   - Only refills if nano wallet has sufficient balance
+   - Direct USDC transfer from nano wallet
+
+### Configuration
+
+Requires the same `CRON_SECRET` environment variable as other cron jobs.
+
 ## Clawback Cron Job
 
 The clawback cron job runs every minute to reclaim USDC from funded wallets when system liquidity is low.
