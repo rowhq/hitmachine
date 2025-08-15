@@ -9,6 +9,12 @@ import usdcAbi from "../../abi/mockUsdc.json";
 import { corsHeaders } from "../cors";
 import { CONTRACTS, GIFT_CARD_PRICE, CURRENT_NETWORK, NETWORK } from "../../config/environment";
 import { getClientIP } from "../../utils/ip-detection";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize Supabase client
+const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, "") || "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const MNEMONIC = process.env.MNEMONIC!;
 
@@ -28,6 +34,25 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const headers = corsHeaders();
+  
+  // Get IP address for tracking
+  const ip = getClientIP(request);
+  console.log(`Purchase attempt from IP: ${ip}`);
+  
+  // Rate limiting - 5 purchase attempts per minute per IP
+  const rateLimitKey = `purchase:${ip}:${Math.floor(Date.now() / 60000)}`;
+  const requests = await kv.incr(rateLimitKey);
+  await kv.expire(rateLimitKey, 120); // Expire after 2 minutes
+  
+  if (requests > 5) {
+    return NextResponse.json(
+      { 
+        error: "Rate limit exceeded. Please try again later.",
+        retryAfter: 60
+      },
+      { status: 429, headers }
+    );
+  }
 
   try {
     // Get network configuration
@@ -160,6 +185,21 @@ export async function POST(request: NextRequest) {
       })) as bigint;
 
       console.log(`Wallet USDC balance: ${usdcBalance.toString()}`);
+      
+      // Validate sufficient balance
+      if (usdcBalance < giftcardPrice) {
+        const shortfall = giftcardPrice - usdcBalance;
+        return NextResponse.json(
+          {
+            error: "Insufficient USDC balance",
+            details: `Wallet has ${(Number(usdcBalance) / 1e6).toFixed(2)} USDC but needs ${(Number(giftcardPrice) / 1e6).toFixed(2)} USDC`,
+            balance: usdcBalance.toString(),
+            required: giftcardPrice.toString(),
+            shortfall: shortfall.toString(),
+          },
+          { status: 400, headers }
+        );
+      }
 
       // Approve infinite amount so user only needs to approve once
       const approvalAmount = BigInt(2) ** BigInt(256) - BigInt(1); // Max uint256
@@ -207,6 +247,23 @@ export async function POST(request: NextRequest) {
 
       console.log(`Purchase tx sent: ${purchaseTx}`);
       transactions.push({ type: 'purchase', hash: purchaseTx });
+      
+      // Log successful purchase attempt
+      try {
+        await supabase.from("wallet_events").insert({
+          ip_address: ip,
+          event_type: "giftcard_purchase",
+          metadata: {
+            wallet_address: account.address,
+            index,
+            purchase_tx: purchaseTx,
+            approval_needed: currentAllowance < giftcardPrice,
+            transactions,
+          },
+        });
+      } catch (supabaseError) {
+        console.log("Supabase logging error:", supabaseError);
+      }
 
       // Don't wait for confirmations - return immediately
       // Find the purchase transaction hash for the UI
@@ -230,10 +287,36 @@ export async function POST(request: NextRequest) {
         error.message || "Unknown error"
       );
 
+      // Log failed purchase attempt
+      try {
+        await supabase.from("wallet_events").insert({
+          ip_address: ip,
+          event_type: "giftcard_purchase_failed",
+          metadata: {
+            wallet_address: address,
+            error: error.message,
+            reason: error.cause?.reason || error.cause?.message,
+            transactions,
+          },
+        });
+      } catch (supabaseError) {
+        console.log("Supabase logging error:", supabaseError);
+      }
+      
+      // Parse error for better user feedback
+      let userFriendlyError = "Transaction failed";
+      if (error.message?.includes("insufficient funds")) {
+        userFriendlyError = "Insufficient funds for gas fees";
+      } else if (error.message?.includes("nonce")) {
+        userFriendlyError = "Transaction nonce error - please retry";
+      } else if (error.message?.includes("paymaster")) {
+        userFriendlyError = "Gas sponsorship failed - please try again";
+      }
+      
       // Return more detailed error
       return NextResponse.json(
         {
-          error: "Transaction failed",
+          error: userFriendlyError,
           details: error.message || "Transaction failed",
           reason:
             error.cause?.reason || error.cause?.message,
