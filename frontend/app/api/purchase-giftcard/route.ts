@@ -8,6 +8,7 @@ import storeAbi from "../../abi/nanoMusicStore.json";
 import usdcAbi from "../../abi/mockUsdc.json";
 import { corsHeaders } from "../cors";
 import { CONTRACTS, GIFT_CARD_PRICE, CURRENT_NETWORK, NETWORK } from "../../config/environment";
+import { getClientIP } from "../../utils/ip-detection";
 
 const MNEMONIC = process.env.MNEMONIC!;
 

@@ -35,10 +35,17 @@ const supabaseServiceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, "") || "";
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const headers = corsHeaders();
 
   try {
+    // Parse optional request body
+    let body = {};
+    try {
+      body = await request.json();
+    } catch (e) {
+      // Body is optional, continue without it
+    }
     // Get network configuration
     const config = getNetworkConfig();
 
@@ -47,18 +54,9 @@ export async function GET(request: NextRequest) {
       console.log(`Generate account - Network: ${config.network}`);
     }
 
-    // Get IP address - try multiple headers to ensure we capture it
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const realIp = request.headers.get("x-real-ip");
-    const cfIp = request.headers.get("cf-connecting-ip");
-    const remoteAddr = request.headers.get("x-vercel-forwarded-for") || 
-                      request.headers.get("x-vercel-ip-city");
-    
-    const ip = (forwardedFor?.split(",")[0].trim() || 
-                realIp || 
-                cfIp || 
-                remoteAddr ||
-                "unknown").toLowerCase();
+    // Use improved IP detection
+    const { getClientIP } = await import('../../utils/ip-detection');
+    const ip = getClientIP(request);
     
     // Log all headers in dev to debug IP detection
     if (process.env.NODE_ENV === 'development') {
@@ -249,4 +247,9 @@ export async function GET(request: NextRequest) {
       { status: 500, headers }
     );
   }
+}
+
+// OPTIONS handler for CORS preflight
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 200, headers: corsHeaders() });
 }
