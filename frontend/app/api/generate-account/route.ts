@@ -55,12 +55,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Use improved IP detection
-    const { getClientIP } = await import('../../utils/ip-detection');
+    const { getClientIP, getGeoInfo } = await import('../../utils/ip-detection');
     const ip = getClientIP(request);
+    const geoInfo = getGeoInfo(request);
     
-    // Log all headers in dev to debug IP detection
+    // Log IP detection in dev
     if (process.env.NODE_ENV === 'development') {
-      console.log('IP Detection:', { forwardedFor, realIp, cfIp, remoteAddr, final: ip });
+      console.log('IP Detection:', { ip });
     }
 
     // Simple rate limiting - 10 requests per second per IP
@@ -190,6 +191,9 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString(),
           index,
           network: config.network,
+          country: geoInfo.country,
+          city: geoInfo.city,
+          region: geoInfo.region,
         })
       ).then(() => kv.ltrim("recent_wallets", 0, 99))
     ];

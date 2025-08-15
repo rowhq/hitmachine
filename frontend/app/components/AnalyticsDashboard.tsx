@@ -181,6 +181,20 @@ export default function AnalyticsDashboard() {
             </div>
           </div>
         )}
+        
+        {analytics.traffic.recentVisits && analytics.traffic.recentVisits.length > 0 && (
+          <div className="mt-4">
+            <h4 className="font-medium text-sm mb-2">Recent Visits</h4>
+            <div className="space-y-1 text-xs">
+              {analytics.traffic.recentVisits.slice(0, 3).map((visit: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center text-gray-600">
+                  <span>{visit.city ? `${visit.city}, ${visit.country}` : visit.country || 'Unknown'}</span>
+                  <span>{new Date(visit.timestamp).toLocaleTimeString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Recent Wallets */}
@@ -193,7 +207,7 @@ export default function AnalyticsDashboard() {
                 <th className="text-left py-2">Address</th>
                 <th className="text-left py-2">Index</th>
                 <th className="text-left py-2">IP</th>
-                <th className="text-left py-2">Country</th>
+                <th className="text-left py-2">Location</th>
                 <th className="text-left py-2">Time</th>
               </tr>
             </thead>
@@ -205,7 +219,11 @@ export default function AnalyticsDashboard() {
                   </td>
                   <td className="py-2">{wallet.index}</td>
                   <td className="py-2 text-xs">{wallet.ip}</td>
-                  <td className="py-2">{wallet.country || '-'}</td>
+                  <td className="py-2 text-xs">
+                    {wallet.city && wallet.country 
+                      ? `${wallet.city}, ${wallet.country}`
+                      : wallet.country || '-'}
+                  </td>
                   <td className="py-2 text-xs">
                     {wallet.timestamp ? new Date(wallet.timestamp).toLocaleTimeString() : '-'}
                   </td>
