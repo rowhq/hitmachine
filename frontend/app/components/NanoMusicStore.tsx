@@ -87,7 +87,7 @@ export default function StoreContract() {
           <div className="space-y-1 text-sm">
             <p>
               <span className="font-medium">Gift Card Price:</span>{' '}
-              {giftcardPrice ? `${formatUnits(giftcardPrice, 6)} USDC` : 'Loading...'}
+              {giftcardPrice ? `${formatUnits(giftcardPrice as bigint, 6)} USDC` : 'Loading...'}
             </p>
             <p>
               <span className="font-medium">Total Purchases:</span>{' '}
@@ -95,11 +95,11 @@ export default function StoreContract() {
             </p>
             <p>
               <span className="font-medium">Total Revenue:</span>{' '}
-              {totalRevenue ? `${formatUnits(totalRevenue, 6)} USDC` : 'Loading...'}
+              {totalRevenue ? `${formatUnits(totalRevenue as bigint, 6)} USDC` : 'Loading...'}
             </p>
             <p>
               <span className="font-medium">USDC Token:</span>{' '}
-              {usdcAddress ? usdcAddress : 'Loading...'}
+              {usdcAddress ? String(usdcAddress) : 'Loading...'}
             </p>
           </div>
         </div>

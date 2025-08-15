@@ -163,17 +163,23 @@ export async function GET(request: NextRequest) {
     // Start all analytics operations in parallel (non-blocking)
     const analyticsPromises = [
       // Supabase tracking
-      supabase.from("wallet_events").insert({
-        ip_address: ip,
-        event_type: "wallet_generated",
-        metadata: {
-          wallet_address: recipient.address,
-          index,
-          funded_usdc: GIFT_CARD_PRICE_DISPLAY,
-          funded_soph: "0",
-          network: config.network,
-        },
-      }).catch(err => console.log("Supabase error:", err)),
+      (async () => {
+        try {
+          await supabase.from("wallet_events").insert({
+            ip_address: ip,
+            event_type: "wallet_generated",
+            metadata: {
+              wallet_address: recipient.address,
+              index,
+              funded_usdc: GIFT_CARD_PRICE_DISPLAY,
+              funded_soph: "0",
+              network: config.network,
+            },
+          });
+        } catch (err) {
+          console.log("Supabase error:", err);
+        }
+      })(),
       
       // KV analytics
       kv.sadd("unique_ips", ip),

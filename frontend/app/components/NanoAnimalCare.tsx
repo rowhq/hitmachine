@@ -105,7 +105,7 @@ export default function NanoAnimalCare() {
           <div className="space-y-1 text-sm">
             <p>
               <span className="font-medium">USDC Token:</span>{' '}
-              {usdcAddress ? usdcAddress : 'Loading...'}
+              {usdcAddress ? String(usdcAddress) : 'Loading...'}
             </p>
           </div>
         </div>
