@@ -14,7 +14,7 @@ export default function GenerateWallet() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/generate-account?testnet=true');
+      const response = await fetch('/api/generate-account');
       
       const data = await response.json();
       

@@ -8,35 +8,25 @@ import {
   type Hex,
 } from "viem";
 import { getGeneralPaymasterInput, eip712WalletActions } from "viem/zksync";
-import { sophonTestnet, sophonMainnet } from "../../config/chains";
+import { currentChain } from "../../config/chains";
 import { kv } from "@vercel/kv";
 import { createClient } from "@supabase/supabase-js";
 import usdcAbi from "../../abi/mockUsdc.json";
 import storeAbi from "../../abi/nanoMusicStore.json";
 import animalCareAbi from "../../abi/nanoAnimalCare.json";
 import { corsHeaders } from "../cors";
-import { CONTRACTS, GIFT_CARD_PRICE, GIFT_CARD_PRICE_DISPLAY } from "../../config/contracts";
+import { CONTRACTS, GIFT_CARD_PRICE, GIFT_CARD_PRICE_DISPLAY, CURRENT_NETWORK, NETWORK } from "../../config/environment";
 
 const MNEMONIC = process.env.MNEMONIC!;
 
-// Determine network from query parameter
-function getNetworkConfig(request: NextRequest) {
-  const url = new URL(request.url);
-  const isTestnet = url.searchParams.has("testnet");
-
-  if (isTestnet) {
-    return {
-      chain: sophonTestnet,
-      ...CONTRACTS.testnet,
-      network: "testnet" as const,
-    };
-  } else {
-    return {
-      chain: sophonMainnet,
-      ...CONTRACTS.mainnet,
-      network: "mainnet" as const,
-    };
-  }
+// Get network configuration (now unified from environment)
+function getNetworkConfig() {
+  return {
+    chain: currentChain,
+    ...CONTRACTS,
+    network: NETWORK,
+    rpcUrl: CURRENT_NETWORK.rpcUrl,
+  };
 }
 
 // Initialize Supabase client
@@ -50,7 +40,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get network configuration
-    const config = getNetworkConfig(request);
+    const config = getNetworkConfig();
 
     // Log only essential info in production
     if (process.env.NODE_ENV === 'development') {

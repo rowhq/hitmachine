@@ -21,7 +21,7 @@ export default function PurchaseGiftcard() {
     setResult(null);
 
     try {
-      const response = await fetch('/api/purchase-giftcard?testnet=true', {
+      const response = await fetch('/api/purchase-giftcard', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ export default function PurchaseGiftcard() {
                 setError('');
                 try {
                   // First generate a wallet
-                  const genResponse = await fetch('/api/generate-account?testnet=true');
+                  const genResponse = await fetch('/api/generate-account');
                   const genData = await genResponse.json();
                   
                   if (!genResponse.ok) {

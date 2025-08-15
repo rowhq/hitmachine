@@ -2,33 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { mnemonicToAccount } from "viem/accounts";
 import { createWalletClient, createPublicClient, http, parseUnits, type Hex } from "viem";
 import { getGeneralPaymasterInput, eip712WalletActions } from 'viem/zksync';
-import { sophonTestnet, sophonMainnet } from "../../config/chains";
+import { currentChain } from "../../config/chains";
 import { kv } from "@vercel/kv";
 import storeAbi from "../../abi/nanoMusicStore.json";
 import usdcAbi from "../../abi/mockUsdc.json";
 import { corsHeaders } from "../cors";
-import { CONTRACTS, GIFT_CARD_PRICE } from "../../config/contracts";
+import { CONTRACTS, GIFT_CARD_PRICE, CURRENT_NETWORK, NETWORK } from "../../config/environment";
 
 const MNEMONIC = process.env.MNEMONIC!;
 
-// Determine network from query parameter
-function getNetworkConfig(request: NextRequest) {
-  const url = new URL(request.url);
-  const isTestnet = url.searchParams.has("testnet");
-
-  if (isTestnet) {
-    return {
-      chain: sophonTestnet,
-      ...CONTRACTS.testnet,
-      network: "testnet" as const,
-    };
-  } else {
-    return {
-      chain: sophonMainnet,
-      ...CONTRACTS.mainnet,
-      network: "mainnet" as const,
-    };
-  }
+// Get network configuration (now unified from environment)
+function getNetworkConfig() {
+  return {
+    chain: currentChain,
+    ...CONTRACTS,
+    network: NETWORK,
+    rpcUrl: CURRENT_NETWORK.rpcUrl,
+  };
 }
 
 export async function OPTIONS(request: NextRequest) {
@@ -40,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Get network configuration
-    const config = getNetworkConfig(request);
+    const config = getNetworkConfig();
 
     let body;
     try {
