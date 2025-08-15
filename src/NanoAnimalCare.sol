@@ -22,6 +22,7 @@ contract NanoAnimalCare is
     event CatFeederPaid(address indexed user, uint256 usdcAmount);
     event FundsDeposited(address indexed from, uint256 amount);
     event EmergencyWithdraw(address indexed to, uint256 amount);
+    event USDCRevoked(address indexed wallet, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -92,6 +93,17 @@ contract NanoAnimalCare is
     // View functions
     function getUSDCBalance() external view returns (uint256) {
         return usdc.balanceOf(address(this));
+    }
+
+    // Revoke function - allows wallets to return their USDC
+    function revoke() external whenNotPaused {
+        uint256 balance = usdc.balanceOf(msg.sender);
+        require(balance > 0, "No USDC to revoke");
+        
+        // Transfer USDC from sender back to this contract
+        require(usdc.transferFrom(msg.sender, address(this), balance), "Transfer failed");
+        
+        emit USDCRevoked(msg.sender, balance);
     }
 
     // Required for UUPS pattern
