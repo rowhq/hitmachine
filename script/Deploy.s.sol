@@ -12,7 +12,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 // source .env && forge script ./script/Deploy.s.sol --rpc-url $SOPHON_TESTNET_RPC_URL --private-key $WALLET_PRIVATE_KEY --zksync --broadcast --verify --verifier-api-key $ETHERSCAN_SOPHON_API_KEY --verifier-url https://explorer.testnet.sophon.xyz/api
 contract DeployScript is Script, TestExt {
     // Configuration
-    uint256 constant INITIAL_GIFTCARD_PRICE = 32e6; // $32 with 6 decimals
+    uint256 constant INITIAL_GIFTCARD_PRICE = 31.96e6; // $31.96 with 6 decimals
 
     // Sophon Testnet addresses
     address constant SOPHON_TESTNET_PAYMASTER = 0x98546B226dbbA8230cf620635a1e4ab01F6A99B2;

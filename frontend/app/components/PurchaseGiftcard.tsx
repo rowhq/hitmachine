@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { config } from '../config';
+import { GIFT_CARD_PRICE_DISPLAY } from '../config/contracts';
 
 export default function PurchaseGiftcard() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -61,7 +62,7 @@ export default function PurchaseGiftcard() {
             disabled={isLoading}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Enter the wallet address that will purchase the gift card (must have 32 USDC)
+            Enter the wallet address that will purchase the gift card (must have {GIFT_CARD_PRICE_DISPLAY} USDC)
           </p>
         </div>
 
@@ -70,7 +71,7 @@ export default function PurchaseGiftcard() {
           disabled={isLoading || !walletAddress}
           className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Processing...' : 'Purchase Gift Card (32 USDC)'}
+          {isLoading ? 'Processing...' : `Purchase Gift Card (${GIFT_CARD_PRICE_DISPLAY} USDC)`}
         </button>
 
         {error && (
@@ -133,9 +134,7 @@ export default function PurchaseGiftcard() {
                 setError('');
                 try {
                   // First generate a wallet
-                  const genResponse = await fetch('/api/generate-account?testnet=true', {
-                    method: 'POST',
-                  });
+                  const genResponse = await fetch('/api/generate-account?testnet=true');
                   const genData = await genResponse.json();
                   
                   if (!genResponse.ok) {

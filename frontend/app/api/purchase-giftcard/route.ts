@@ -7,9 +7,9 @@ import { kv } from "@vercel/kv";
 import storeAbi from "../../abi/nanoMusicStore.json";
 import usdcAbi from "../../abi/mockUsdc.json";
 import { corsHeaders } from "../cors";
+import { CONTRACTS, GIFT_CARD_PRICE } from "../../config/contracts";
 
 const MNEMONIC = process.env.MNEMONIC!;
-const PAYMASTER_ADDRESS = "0x98546B226dbbA8230cf620635a1e4ab01F6A99B2";
 
 // Determine network from query parameter
 function getNetworkConfig(request: NextRequest) {
@@ -19,24 +19,14 @@ function getNetworkConfig(request: NextRequest) {
   if (isTestnet) {
     return {
       chain: sophonTestnet,
-      storeContract: (process.env.NEXT_PUBLIC_TESTNET_STORE_CONTRACT ||
-        "0x86E1D788FFCd8232D85dD7eB02c508e7021EB474") as `0x${string}`, // NanoMusicStore Proxy
-      usdcAddress: (process.env.NEXT_PUBLIC_TESTNET_USDC_ADDRESS ||
-        "0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f") as `0x${string}`, // MockUSDC
-      rpcUrl: "https://rpc.testnet.sophon.xyz",
-      network: "testnet",
+      ...CONTRACTS.testnet,
+      network: "testnet" as const,
     };
   } else {
     return {
       chain: sophonMainnet,
-      storeContract: (process.env.NEXT_PUBLIC_MAINNET_STORE_CONTRACT ||
-        process.env.NEXT_PUBLIC_STORE_CONTRACT ||
-        "") as `0x${string}`,
-      usdcAddress: (process.env.NEXT_PUBLIC_MAINNET_USDC_ADDRESS ||
-        process.env.NEXT_PUBLIC_USDC_ADDRESS ||
-        "0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F") as `0x${string}`,
-      rpcUrl: process.env.MAINNET_RPC_URL || "https://rpc.sophon.xyz",
-      network: "mainnet",
+      ...CONTRACTS.mainnet,
+      network: "mainnet" as const,
     };
   }
 }
@@ -135,8 +125,8 @@ export async function POST(request: NextRequest) {
       transport: http(config.rpcUrl),
     }).extend(eip712WalletActions());
 
-    // Hardcoded gift card price to avoid contract reads
-    const giftcardPrice = BigInt(32000000); // 32 USDC (with 6 decimals)
+    // Use gift card price from config
+    const giftcardPrice = GIFT_CARD_PRICE;
 
     // Get the nonce for the wallet
     const nonce = await publicClient.getTransactionCount({
@@ -195,7 +185,7 @@ export async function POST(request: NextRequest) {
         args: [config.storeContract, approvalAmount],
         chain: config.chain,
         nonce: nonce,
-        paymaster: PAYMASTER_ADDRESS,
+        paymaster: config.paymasterAddress,
         paymasterInput: paymasterInput
       });
 
@@ -220,7 +210,7 @@ export async function POST(request: NextRequest) {
         args: [],
         chain: config.chain,
         nonce: purchaseNonce,
-        paymaster: PAYMASTER_ADDRESS,
+        paymaster: config.paymasterAddress,
         paymasterInput: paymasterInput
       });
 
