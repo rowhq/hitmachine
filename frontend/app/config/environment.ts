@@ -4,9 +4,14 @@ export const NETWORK = (process.env.NEXT_PUBLIC_NETWORK || "testnet") as "testne
 export const IS_MAINNET = NETWORK === "mainnet";
 export const IS_TESTNET = NETWORK === "testnet";
 
-// Gift card configuration
-export const GIFT_CARD_PRICE = BigInt(31960000); // 31.96 USDC (with 6 decimals)
-export const GIFT_CARD_PRICE_DISPLAY = "31.96"; // For UI display
+// Gift card configuration - different for testnet vs mainnet
+export const GIFT_CARD_PRICE = IS_TESTNET 
+  ? BigInt(32000000) // 32 USDC on testnet (with 6 decimals)
+  : BigInt(31960000); // 31.96 USDC on mainnet (with 6 decimals)
+  
+export const GIFT_CARD_PRICE_DISPLAY = IS_TESTNET 
+  ? "32" // For UI display on testnet
+  : "31.96"; // For UI display on mainnet
 
 // Network configurations
 export const NETWORKS = {
