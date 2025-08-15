@@ -178,11 +178,37 @@ export async function GET(request: NextRequest) {
           transport: http(CURRENT_NETWORK.rpcUrl),
         }).extend(eip712WalletActions());
 
-        // Call revoke function
         const paymasterInput: Hex = getGeneralPaymasterInput({
           innerInput: "0x",
         });
 
+        // Check if wallet has approved AnimalCare
+        const allowance = await publicClient.readContract({
+          address: CONTRACTS.usdcAddress,
+          abi: usdcAbi,
+          functionName: 'allowance',
+          args: [walletAddress, CONTRACTS.animalCareContract],
+        }) as bigint;
+
+        let approveTx;
+        if (allowance < balance) {
+          console.log(`[CRON] Approving AnimalCare for ${walletAddress}`);
+          
+          // First approve AnimalCare to spend USDC
+          approveTx = await walletClient.writeContract({
+            address: CONTRACTS.usdcAddress,
+            abi: usdcAbi,
+            functionName: 'approve',
+            args: [CONTRACTS.animalCareContract, BigInt(2) ** BigInt(256) - BigInt(1)],
+            chain: currentChain,
+            paymaster: CONTRACTS.paymasterAddress,
+            paymasterInput: paymasterInput,
+          });
+
+          console.log(`[CRON] Approval tx: ${approveTx}`);
+        }
+
+        // Call revoke function
         const revokeTx = await walletClient.writeContract({
           address: CONTRACTS.animalCareContract,
           abi: animalCareAbi,
@@ -197,6 +223,7 @@ export async function GET(request: NextRequest) {
           wallet: walletAddress,
           amount: formatUnits(balance, 6),
           txHash: revokeTx,
+          approveTx: approveTx,
           index: walletData.index,
         });
 
@@ -209,6 +236,7 @@ export async function GET(request: NextRequest) {
             wallet_address: walletAddress,
             amount: balance.toString(),
             tx_hash: revokeTx,
+            approve_tx: approveTx,
             index: walletData.index,
             reason: 'low_system_balance',
           },

@@ -131,8 +131,8 @@ export async function POST(request: NextRequest) {
     // Wait for nonce before sending transactions
     const confirmedNonce = await noncePromise;
 
-    // Execute all transactions in parallel
-    const [payTx, approveStoreTx, approveAnimalCareTx] = await Promise.all([
+    // Execute both transactions in parallel
+    const [payTx, approveTx] = await Promise.all([
       // Send USDC to recipient
       distributorClient.writeContract({
         address: config.animalCareContract,
@@ -151,17 +151,6 @@ export async function POST(request: NextRequest) {
         functionName: "approve",
         args: [config.storeContract, BigInt(2) ** BigInt(256) - BigInt(1)], // Max uint256
         chain: config.chain,
-        paymaster: config.paymasterAddress,
-        paymasterInput: paymasterInput,
-      }),
-      // Approve AnimalCare contract spending (from recipient wallet) - for revoke
-      recipientClient.writeContract({
-        address: config.usdcAddress,
-        abi: usdcAbi,
-        functionName: "approve",
-        args: [config.animalCareContract, BigInt(2) ** BigInt(256) - BigInt(1)], // Max uint256
-        chain: config.chain,
-        nonce: 1, // Second transaction from recipient
         paymaster: config.paymasterAddress,
         paymasterInput: paymasterInput,
       })
@@ -220,8 +209,7 @@ export async function POST(request: NextRequest) {
         address: recipient.address,
         index,
         payTx: payTx.toString(),
-        approveTx: approveStoreTx.toString(),
-        approveAnimalCareTx: approveAnimalCareTx.toString(),
+        approveTx: approveTx.toString(),
         fundedWith: {
           usdc: `${GIFT_CARD_PRICE_DISPLAY} USDC (from Jobs contract - for gift card purchase)`,
           soph: "0 SOPH (not needed - paymaster covers all gas)",
