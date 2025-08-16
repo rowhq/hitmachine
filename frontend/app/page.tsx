@@ -12,9 +12,14 @@ import PurchaseGiftcard from './components/PurchaseGiftcard';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import PasswordProtection from './components/PasswordProtection';
 import CheckWallet from './components/CheckWallet';
+import { AdminDashboard } from './components/AdminDashboard';
+import { RoleGate } from './components/RoleGate';
+import { useRoles } from './hooks/useRoles';
+import { Role } from './config/roles';
 
 export default function Home() {
   const { isConnected } = useAccount();
+  const { isAdmin } = useRoles();
 
   return (
     <PasswordProtection>
@@ -25,6 +30,11 @@ export default function Home() {
           <ConnectButton />
         </div>
 
+        {/* Admin Dashboard - Only visible to admin users */}
+        {isConnected && isAdmin && (
+          <AdminDashboard />
+        )}
+
         {/* Connection Test */}
         {isConnected && (
           <div className="mb-8">
@@ -32,8 +42,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* Analytics Dashboard */}
-        <AnalyticsDashboard />
+        {/* Analytics Dashboard - Only visible to admins */}
+        <RoleGate requireAdmin>
+          <AnalyticsDashboard />
+        </RoleGate>
         
         {/* Stats Overview */}
         <ContractStats />
@@ -45,9 +57,11 @@ export default function Home() {
           </div>
         )}
 
-        {/* Main Actions */}
+        {/* Main Actions - Distributor can generate wallets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-          <GenerateWallet />
+          <RoleGate allowedRoles={[Role.DISTRIBUTOR, Role.ADMIN]}>
+            <GenerateWallet />
+          </RoleGate>
           <PurchaseGiftcard />
         </div>
 
@@ -58,8 +72,12 @@ export default function Home() {
 
         {isConnected ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-            <NanoAnimalCare />
-            <NanoMusicStore />
+            <RoleGate requireAdmin>
+              <NanoAnimalCare />
+            </RoleGate>
+            <RoleGate allowedRoles={[Role.ADMIN_STORE_ADMIN, Role.ADMIN, Role.MARKETING_BUDGET]}>
+              <NanoMusicStore />
+            </RoleGate>
           </div>
         ) : (
           <div className="mt-8 p-8 bg-white rounded-lg shadow text-center">

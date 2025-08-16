@@ -9,12 +9,12 @@ import usdcAbi from "../../abi/mockUsdc.json";
 import { corsHeaders } from "../cors";
 import { CONTRACTS, GIFT_CARD_PRICE, CURRENT_NETWORK, NETWORK } from "../../config/environment";
 import { getClientIP } from "../../utils/ip-detection";
-import { createClient } from "@supabase/supabase-js";
-
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, "") || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import {
+  trackPurchaseAttempt,
+  trackPurchaseCompleted,
+  trackError,
+  incrementCounter
+} from "../../utils/analytics-service";
 
 const MNEMONIC = process.env.MNEMONIC!;
 
@@ -70,11 +70,15 @@ export async function POST(request: NextRequest) {
     const address = body.address as `0x${string}`;
 
     if (!address) {
+      await trackError(request, 'purchase_attempt', 'Address parameter is required');
       return NextResponse.json(
         { error: "Address parameter is required" },
         { status: 400, headers }
       );
     }
+
+    // Track purchase attempt with wallet address
+    await trackPurchaseAttempt(request, address);
 
     const index = (await kv.get(
       `wallet_address_to_index:${address.toLowerCase()}`
@@ -86,6 +90,9 @@ export async function POST(request: NextRequest) {
 
     // Validate index range
     if (index === null || index === undefined || isNaN(index) || index < 0) {
+      await trackError(request, 'purchase_attempt', 'Wallet not found in system', address, {
+        indexFound: index
+      });
       return NextResponse.json(
         {
           error: "Wallet not found in system",
@@ -101,6 +108,10 @@ export async function POST(request: NextRequest) {
     const indexKey = `wallet_index_${config.network}`;
     const maxIndex = await kv.get(indexKey);
     if (index > Number(maxIndex)) {
+      await trackError(request, 'purchase_attempt', `Index out of bounds: max is ${maxIndex}`, address, {
+        index,
+        maxIndex
+      });
       return NextResponse.json(
         { error: `Index out of bounds: max is ${maxIndex}` },
         { status: 400, headers }
@@ -115,6 +126,11 @@ export async function POST(request: NextRequest) {
 
     // Verify the derived wallet matches the input address
     if (account.address.toLowerCase() !== address.toLowerCase()) {
+      await trackError(request, 'purchase_attempt', 'Wallet mismatch', address, {
+        providedAddress: address,
+        derivedAddress: account.address,
+        index: index
+      });
       return NextResponse.json(
         {
           error: "Wallet mismatch",
@@ -189,6 +205,11 @@ export async function POST(request: NextRequest) {
       // Validate sufficient balance
       if (usdcBalance < giftcardPrice) {
         const shortfall = giftcardPrice - usdcBalance;
+        await trackError(request, 'purchase_attempt', 'Insufficient USDC balance', address, {
+          balance: usdcBalance.toString(),
+          required: giftcardPrice.toString(),
+          shortfall: shortfall.toString()
+        });
         return NextResponse.json(
           {
             error: "Insufficient USDC balance",
@@ -248,22 +269,11 @@ export async function POST(request: NextRequest) {
       console.log(`Purchase tx sent: ${purchaseTx}`);
       transactions.push({ type: 'purchase', hash: purchaseTx });
       
-      // Log successful purchase attempt
-      try {
-        await supabase.from("wallet_events").insert({
-          ip_address: ip,
-          event_type: "giftcard_purchase",
-          metadata: {
-            wallet_address: account.address,
-            index,
-            purchase_tx: purchaseTx,
-            approval_needed: currentAllowance < giftcardPrice,
-            transactions,
-          },
-        });
-      } catch (supabaseError) {
-        console.log("Supabase logging error:", supabaseError);
-      }
+      // Track successful purchase
+      await trackPurchaseCompleted(request, account.address, purchaseTx.toString(), transactions);
+      
+      // Additional KV analytics
+      await incrementCounter('total_purchases_completed');
 
       // Don't wait for confirmations - return immediately
       // Find the purchase transaction hash for the UI
@@ -287,21 +297,11 @@ export async function POST(request: NextRequest) {
         error.message || "Unknown error"
       );
 
-      // Log failed purchase attempt
-      try {
-        await supabase.from("wallet_events").insert({
-          ip_address: ip,
-          event_type: "giftcard_purchase_failed",
-          metadata: {
-            wallet_address: address,
-            error: error.message,
-            reason: error.cause?.reason || error.cause?.message,
-            transactions,
-          },
-        });
-      } catch (supabaseError) {
-        console.log("Supabase logging error:", supabaseError);
-      }
+      // Track failed purchase
+      await trackError(request, 'purchase_attempt', error.message || "Unknown error", account.address, {
+        reason: error.cause?.reason || error.cause?.message,
+        transactions
+      });
       
       // Parse error for better user feedback
       let userFriendlyError = "Transaction failed";
@@ -327,6 +327,12 @@ export async function POST(request: NextRequest) {
     }
   } catch (err: any) {
     console.error("Purchase album error:", err.message || err);
+    
+    // Track top-level error
+    await trackError(request, 'purchase_attempt', err.message || "Unexpected error", undefined, {
+      stack: err.stack
+    });
+    
     return NextResponse.json(
       { error: err.message || "Unexpected error" },
       { status: 500, headers }

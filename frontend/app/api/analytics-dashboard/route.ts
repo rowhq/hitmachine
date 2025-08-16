@@ -73,32 +73,74 @@ export async function GET(request: NextRequest) {
             kv.get('wallet_index')
         ]);
 
-        // Get Supabase IP tracking data if available
+        // Get Supabase IP tracking data from wallet_events
         let ipTrackingData = {
             uniqueVisitors: 0,
-            totalPageViews: 0,
+            totalEvents: 0,
             topCountries: [] as { country: string; count: number }[],
-            recentVisits: [] as { ip: string; country: string; city: string; timestamp: string }[]
+            recentEvents: [] as { ip: string; event: string; wallet?: string; timestamp: string }[],
+            conversionFunnel: {
+                generate_attempts: 0,
+                wallets_generated: 0,
+                wallets_funded: 0,
+                purchase_attempts: 0,
+                purchases_completed: 0,
+                flows_completed: 0,
+                errors_by_stage: {} as Record<string, number>
+            }
         };
 
         try {
-            // Get unique IPs from Supabase
-            const { data: ipData, error } = await supabase
-                .from('ip_visits')
-                .select('ip_address, country, city, created_at')
+            // Get all events from wallet_events
+            const { data: eventData, error } = await supabase
+                .from('wallet_events')
+                .select('ip_address, event_type, metadata, created_at')
                 .order('created_at', { ascending: false })
-                .limit(100);
+                .limit(500);
 
-            if (!error && ipData) {
-                const uniqueIpSet = new Set(ipData.map(d => d.ip_address));
+            if (!error && eventData) {
+                const uniqueIpSet = new Set(eventData.map(d => d.ip_address));
                 ipTrackingData.uniqueVisitors = uniqueIpSet.size;
-                ipTrackingData.totalPageViews = ipData.length;
+                ipTrackingData.totalEvents = eventData.length;
                 
-                // Count by country
+                // Count events by type for conversion funnel
+                eventData.forEach(d => {
+                    // Check if it's an error event
+                    if (d.metadata?.success === false) {
+                        const stage = d.event_type;
+                        ipTrackingData.conversionFunnel.errors_by_stage[stage] = 
+                            (ipTrackingData.conversionFunnel.errors_by_stage[stage] || 0) + 1;
+                    } else {
+                        // Count successful events
+                        switch(d.event_type) {
+                            case 'generate_account_attempt':
+                                ipTrackingData.conversionFunnel.generate_attempts++;
+                                break;
+                            case 'wallet_generated':
+                                ipTrackingData.conversionFunnel.wallets_generated++;
+                                break;
+                            case 'wallet_funded':
+                                ipTrackingData.conversionFunnel.wallets_funded++;
+                                break;
+                            case 'purchase_attempt':
+                                ipTrackingData.conversionFunnel.purchase_attempts++;
+                                break;
+                            case 'purchase_completed':
+                                ipTrackingData.conversionFunnel.purchases_completed++;
+                                break;
+                            case 'flow_completed':
+                                ipTrackingData.conversionFunnel.flows_completed++;
+                                break;
+                        }
+                    }
+                });
+                
+                // Count by country from metadata
                 const countryCount: { [key: string]: number } = {};
-                ipData.forEach(d => {
-                    if (d.country) {
-                        countryCount[d.country] = (countryCount[d.country] || 0) + 1;
+                eventData.forEach(d => {
+                    const country = d.metadata?.geo?.country;
+                    if (country) {
+                        countryCount[country] = (countryCount[country] || 0) + 1;
                     }
                 });
                 
@@ -107,10 +149,11 @@ export async function GET(request: NextRequest) {
                     .slice(0, 5)
                     .map(([country, count]) => ({ country, count }));
                     
-                ipTrackingData.recentVisits = ipData.slice(0, 5).map(d => ({
+                // Recent events with more details
+                ipTrackingData.recentEvents = eventData.slice(0, 10).map(d => ({
                     ip: d.ip_address,
-                    country: d.country,
-                    city: d.city,
+                    event: d.event_type,
+                    wallet: d.metadata?.wallet_address,
                     timestamp: d.created_at
                 }));
             }

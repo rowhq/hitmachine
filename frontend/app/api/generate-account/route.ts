@@ -10,12 +10,20 @@ import {
 import { getGeneralPaymasterInput, eip712WalletActions } from "viem/zksync";
 import { currentChain } from "../../config/chains";
 import { kv } from "@vercel/kv";
-import { createClient } from "@supabase/supabase-js";
 import usdcAbi from "../../abi/mockUsdc.json";
 import storeAbi from "../../abi/nanoMusicStore.json";
 import animalCareAbi from "../../abi/nanoAnimalCare.json";
 import { corsHeaders } from "../cors";
 import { CONTRACTS, GIFT_CARD_PRICE, GIFT_CARD_PRICE_DISPLAY, CURRENT_NETWORK, NETWORK } from "../../config/environment";
+import {
+  trackGenerateAttempt,
+  trackWalletGenerated,
+  trackWalletFunded,
+  trackError,
+  incrementCounter,
+  addToSet,
+  pushToList
+} from "../../utils/analytics-service";
 
 const MNEMONIC = process.env.MNEMONIC!;
 
@@ -29,11 +37,6 @@ function getNetworkConfig() {
   };
 }
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
-const supabaseServiceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, "") || "";
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: NextRequest) {
   const headers = corsHeaders();
@@ -79,6 +82,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Track the attempt after rate limit check
+    await trackGenerateAttempt(request);
+
     const indexKey = `wallet_index_${config.network}`;
     
     // Get and increment index atomically
@@ -88,6 +94,9 @@ export async function POST(request: NextRequest) {
     const recipient = mnemonicToAccount(MNEMONIC, {
       path: `m/44'/60'/0'/0/${index}`,
     });
+
+    // Track wallet generation
+    await trackWalletGenerated(request, recipient.address, index);
 
     // Prepare all clients and data upfront
     const distributor = privateKeyToAccount(
@@ -159,49 +168,24 @@ export async function POST(request: NextRequest) {
     // Ensure KV storage is complete
     await kvPromise;
 
-    // Start all analytics operations in parallel (non-blocking)
-    const analyticsPromises = [
-      // Supabase tracking
-      (async () => {
-        try {
-          await supabase.from("wallet_events").insert({
-            ip_address: ip,
-            event_type: "wallet_generated",
-            metadata: {
-              wallet_address: recipient.address,
-              index,
-              funded_usdc: GIFT_CARD_PRICE_DISPLAY,
-              funded_soph: "0",
-              network: config.network,
-            },
-          });
-        } catch (err) {
-          console.log("Supabase error:", err);
-        }
-      })(),
-      
-      // KV analytics
-      kv.sadd("unique_ips", ip),
-      kv.incr("total_wallets_generated"),
-      kv.lpush(
-        "recent_wallets",
-        JSON.stringify({
-          address: recipient.address,
-          ip,
-          timestamp: new Date().toISOString(),
-          index,
-          network: config.network,
-          country: geoInfo.country,
-          city: geoInfo.city,
-          region: geoInfo.region,
-        })
-      ).then(() => kv.ltrim("recent_wallets", 0, 99))
-    ];
-    
-    // Don't wait for analytics to complete
-    Promise.all(analyticsPromises).catch(err => 
-      console.error("Analytics error:", err)
-    );
+    // Track wallet funding with transaction hashes
+    await trackWalletFunded(request, recipient.address, payTx.toString(), approveTx.toString());
+
+    // Additional KV analytics
+    await Promise.all([
+      addToSet("unique_ips", ip),
+      incrementCounter("total_wallets_generated"),
+      pushToList("recent_wallets", {
+        address: recipient.address,
+        ip,
+        timestamp: new Date().toISOString(),
+        index,
+        network: config.network,
+        country: geoInfo.country,
+        city: geoInfo.city,
+        region: geoInfo.region,
+      }, 100)
+    ]);
 
     return NextResponse.json(
       {
@@ -242,6 +226,12 @@ export async function POST(request: NextRequest) {
     } else if (err.message) {
       errorMessage = err.message;
     }
+
+    // Track the error
+    await trackError(request, 'generate_account_attempt', errorMessage, undefined, {
+      error_stack: err.stack,
+      error_cause: err.cause
+    });
 
     return NextResponse.json(
       {
