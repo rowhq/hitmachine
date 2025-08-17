@@ -3,16 +3,16 @@
     "app/api/generate-account/route.ts": {
       "maxDuration": 10
     },
-    "app/api/purchase-album/route.ts": {
+    "app/api/purchase-giftcard/route.ts": {
       "maxDuration": 10
     },
-    "app/api/check-balances/route.ts": {
+    "app/api/complete-flow/route.ts": {
       "maxDuration": 10
     },
-    "app/api/mass-buy/route.ts": {
-      "maxDuration": 30
+    "app/api/analytics/route.ts": {
+      "maxDuration": 10
     },
-    "app/api/cron/refill-jobs/route.ts": {
+    "app/api/analytics-dashboard/route.ts": {
       "maxDuration": 10
     },
     "app/api/cron/clawback/route.ts": {
@@ -23,10 +23,6 @@
     }
   },
   "crons": [
-    {
-      "path": "/api/cron/refill-jobs",
-      "schedule": "* * * * *"
-    },
     {
       "path": "/api/cron/clawback",
       "schedule": "* * * * *"
