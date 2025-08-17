@@ -16,7 +16,7 @@ import {
   incrementCounter
 } from "../../utils/analytics-service";
 
-const MNEMONIC = process.env.MNEMONIC!;
+const USER_MNEMONIC = process.env.USER_MNEMONIC!;
 
 // Get network configuration (now unified from environment)
 function getNetworkConfig() {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const account = mnemonicToAccount(MNEMONIC, {
+    const account = mnemonicToAccount(USER_MNEMONIC, {
       path: `m/44'/60'/0'/0/${index}`,
     });
 

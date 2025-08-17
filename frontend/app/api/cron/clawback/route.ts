@@ -16,7 +16,8 @@ import storeAbi from "../../../abi/nanoMusicStore.json";
 import animalCareAbi from "../../../abi/nanoAnimalCare.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
-const MNEMONIC = process.env.MNEMONIC!;
+const USER_MNEMONIC = process.env.USER_MNEMONIC!;
+const ADMIN_MNEMONIC = process.env.ADMIN_MNEMONIC!;
 const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC
 const CLAWBACK_AGE_MS = 60 * 60 * 1000; // 1 hour
 
@@ -49,8 +50,8 @@ export async function GET(request: NextRequest) {
       transport: http(CURRENT_NETWORK.rpcUrl),
     });
 
-    // Derive nano wallet (index 0)
-    const nanoWallet = mnemonicToAccount(MNEMONIC, {
+    // Derive nano wallet (index 0) from admin mnemonic
+    const nanoWallet = mnemonicToAccount(ADMIN_MNEMONIC, {
       path: `m/44'/60'/0'/0/0`,
     });
 
@@ -168,7 +169,7 @@ export async function GET(request: NextRequest) {
         console.log(`[CRON] Clawing back ${formatUnits(balance, 6)} USDC from ${walletAddress}`);
 
         // Derive wallet from mnemonic
-        const account = mnemonicToAccount(MNEMONIC, {
+        const account = mnemonicToAccount(USER_MNEMONIC, {
           path: `m/44'/60'/0'/0/${walletData.index}`,
         });
 

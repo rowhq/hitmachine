@@ -25,7 +25,7 @@ import {
   pushToList
 } from "../../utils/analytics-service";
 
-const MNEMONIC = process.env.MNEMONIC!;
+const USER_MNEMONIC = process.env.USER_MNEMONIC!;
 
 // Get network configuration (now unified from environment)
 function getNetworkConfig() {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const index = await kv.incr(indexKey) - 1;
 
     // Derive new wallet for the user
-    const recipient = mnemonicToAccount(MNEMONIC, {
+    const recipient = mnemonicToAccount(USER_MNEMONIC, {
       path: `m/44'/60'/0'/0/${index}`,
     });
 

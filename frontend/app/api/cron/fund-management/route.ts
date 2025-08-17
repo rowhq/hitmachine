@@ -16,7 +16,7 @@ import storeAbi from "../../../abi/nanoMusicStore.json";
 import animalCareAbi from "../../../abi/nanoAnimalCare.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
-const MNEMONIC = process.env.MNEMONIC!;
+const ADMIN_MNEMONIC = process.env.ADMIN_MNEMONIC!;
 const STORE_WITHDRAWAL_THRESHOLD = BigInt(3000 * 1e6); // 3,000 USDC
 const ANIMAL_CARE_REFILL_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC
 
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
       transport: http(CURRENT_NETWORK.rpcUrl),
     });
 
-    // Derive nano wallet (index 0)
-    const nanoWallet = mnemonicToAccount(MNEMONIC, {
+    // Derive nano wallet (index 0) from admin mnemonic
+    const nanoWallet = mnemonicToAccount(ADMIN_MNEMONIC, {
       path: `m/44'/60'/0'/0/0`,
     });
     
