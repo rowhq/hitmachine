@@ -1,6 +1,6 @@
-# HitMachine - System Flow
+# HitMachine - Gift Card Purchase System
 
-**Live Deployment**: [https://hitmachine.vercel.app](https://hitmachine.vercel.app)
+**Live Deployment**: [https://hitmachine-nano.vercel.app](https://hitmachine-nano.vercel.app)
 
 ## Simple Flow Diagram
 
