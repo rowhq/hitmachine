@@ -9,12 +9,12 @@ import {NanoBand} from "../src/NanoBand.sol";
 // Grant roles to deployed contracts on mainnet (separate from deployment)
 // Usage:
 // MAINNET:
-// source .env && forge script ./script/GrantRolesProd.s.sol --rpc-url https://rpc.sophon.xyz --zksync --broadcast
+// source .env && forge script ./script/GrantRolesMainnet.s.sol --rpc-url https://rpc.sophon.xyz --zksync --broadcast
 
-contract GrantRolesProdScript is Script, TestExt {
+contract GrantRolesMainnetScript is Script, TestExt {
     // Sophon Mainnet addresses (from deployment)
     address constant MAINNET_STORE = 0x966F836502171b402f69eC4B9d2835d1c5066a32; // NanoMusicStore Proxy
-    address constant MAINNET_BAND = 0x85219AF6f0a3d1181649e78d310A66b15D377713; // NanoBand Proxy
+    address constant MAINNET_BAND = 0x85219AF6f0a3d1181649e78d310A66b15D377713;  // NanoBand Proxy
     address constant SOPHON_MAINNET_PAYMASTER = 0x98546B226dbbA8230cf620635a1e4ab01F6A99B2;
 
     function run() external {
@@ -35,7 +35,7 @@ contract GrantRolesProdScript is Script, TestExt {
         require(MAINNET_BAND != address(0), "Band address not set - update MAINNET_BAND constant");
 
         console.log("========================================");
-        console.log("GRANTING ROLES ON MAINNET PRODUCTION");
+        console.log("GRANTING ROLES ON MAINNET");
         console.log("========================================");
         console.log("Chain ID:", chainId);
         console.log("Deployer:", deployer);

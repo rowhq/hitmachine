@@ -19,9 +19,9 @@ contract DeployMainnetScript is Script, TestExt {
     uint256 constant SOPHON_MAINNET_CHAIN_ID = 50104;
 
     function run() external {
-        // Get wallet2 mnemonic and w2 private key from .env
+        // Get wallet2 mnemonic and deployer private key from .env
         string memory wallet2Mnemonic = vm.envString("wallet2");
-        uint256 deployerPrivateKey = vm.envUint("w2");
+        uint256 deployerPrivateKey = vm.envUint("WALLET_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
         // Verify we're on mainnet
@@ -93,9 +93,10 @@ contract DeployMainnetScript is Script, TestExt {
         console.log("\n========================================");
         console.log("NEXT STEPS:");
         console.log("========================================");
-        console.log("1. Grant roles using GrantRoles.s.sol");
+        console.log("1. Grant roles using GrantRolesMainnet.s.sol");
         console.log("2. Verify contracts on explorer");
         console.log("3. Update frontend config with addresses");
+        console.log("4. Fund NanoBand contract with USDC");
         console.log("========================================");
     }
 }
