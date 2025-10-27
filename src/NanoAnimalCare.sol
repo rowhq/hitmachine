@@ -19,7 +19,7 @@ contract NanoAnimalCare is
 
     IERC20 public usdc;
 
-    event CatFeederPaid(address indexed user, uint256 usdcAmount);
+    event SongSubmitted(address indexed user, uint256 usdcAmount);
     event FundsDeposited(address indexed from, uint256 amount);
     event EmergencyWithdraw(address indexed to, uint256 amount);
     event USDCRevoked(address indexed wallet, uint256 amount);
@@ -45,8 +45,8 @@ contract NanoAnimalCare is
         _grantRole(DISTRIBUTOR_ROLE, _admin);
     }
 
-    // Simple function to pay cat feeders - just sends USDC
-    function payCatFeeder(address user, uint256 usdcAmount, uint256)
+    // Simple function to pay song submitters - just sends USDC
+    function paySongSubmitter(address user, uint256 usdcAmount, uint256)
         external
         whenNotPaused
         onlyRole(DISTRIBUTOR_ROLE)
@@ -55,11 +55,11 @@ contract NanoAnimalCare is
         require(usdcAmount > 0, "Amount must be greater than 0");
         require(usdc.balanceOf(address(this)) >= usdcAmount, "Insufficient USDC balance");
         require(usdc.transfer(user, usdcAmount), "USDC transfer failed");
-        
-        emit CatFeederPaid(user, usdcAmount);
+
+        emit SongSubmitted(user, usdcAmount);
     }
 
-    // Deposit USDC to fund cat feeder payments
+    // Deposit USDC to fund song submissions
     function depositUSDC(uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
         require(usdc.transferFrom(msg.sender, address(this), amount), "Transfer failed");

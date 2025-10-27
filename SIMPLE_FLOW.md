@@ -30,7 +30,7 @@ flowchart TB
     Worker[Worker]
     
     NanoWallet -->|Step 1 payForJob| JobsContract
-    JobsContract -->|Step 1 transfers 32 USDC| Worker
+    JobsContract -->|Step 1 transfers 31.96 USDC| Worker
     Worker -->|Step 2 buyAlbums| StoreContract
     NanoWallet -->|Step 3 claimReferralCommissions| StoreContract
     StoreContract -->|Step 3 transfers 1000 plus USDC| JobsContract
@@ -54,11 +54,11 @@ sequenceDiagram
     rect rgb(200, 255, 200)
         Note right of N: Step 1 Job Payment
         N->>J: payForJob(worker)
-        J->>W: transfers 32 USDC
+        J->>W: transfers 31.96 USDC
     end
     rect rgb(255, 230, 200)
         Note right of W: Step 2 Album Purchase
-        W->>S: buyAlbums() with 32 USDC
+        W->>S: buyAlbums() with 31.96 USDC
         Note over S: Accumulates 1000 plus USDC revenue
     end
     rect rgb(200, 230, 255)
@@ -79,15 +79,15 @@ sequenceDiagram
 ```solidity
 Jobs.payForJob(workerAddress)
 ```
-- Nano calls this to pay workers 32 USDC
+- Nano calls this to pay workers 31.96 USDC
 - Workers create and fund user wallets
 
 ### 3️⃣ **Album Purchase**
 ```solidity
 Store.buyAlbums()
 ```
-- Users (workers) call this with their 32 USDC
-- Automatically purchases 4 albums (at 8 USDC each)
+- Users (workers) call this with their 31.96 USDC
+- Automatically purchases 4 albums (at 7.99 USDC each)
 - Revenue accumulates in Store contract
 
 ### 4️⃣ **Commission Claim**
@@ -102,8 +102,8 @@ Store.claimReferralCommissions(jobsAddress, amount)
 
 The circular flow:
 
-- Nano LLC pays worker from Jobs contract (32 USDC per job)
-- Worker buys 4 albums from Store (32 USDC = 4 albums @ $8 each)
+- Nano LLC pays worker from Jobs contract (31.96 USDC per job)
+- Worker buys 4 albums from Store (31.96 USDC = 4 albums @ $7.99 each)
 - After many purchases accumulate, Nano LLC claims large commission from Store (1000 plus USDC)
 - Commission goes back to Jobs contract
 - Jobs contract can now pay 30 plus more workers
@@ -113,7 +113,7 @@ After initial funding, the system runs on commissions - no additional capital ne
 
 ## Key Points
 
-- 32 USDC = Standard job payment and album purchase amount
+- 31.96 USDC = Standard job payment and album purchase amount
 - Jobs contract maintains 1000 plus USDC balance for continuous operations
 - Commission claims are batched (1000 plus USDC) for efficiency
 - Two Companies: Nano (referral) and Store (sales) with legal agreement
@@ -123,7 +123,7 @@ After initial funding, the system runs on commissions - no additional capital ne
 ## Contract Methods
 
 ### Jobs Contract
-- `payForJob(address worker)` - Pays 32 USDC to worker
+- `payForJob(address worker)` - Pays 31.96 USDC to worker
 
 ### Store Contract  
 - `buyAlbums()` - Purchases albums with available USDC

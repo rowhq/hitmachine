@@ -4,11 +4,14 @@ pragma solidity ^0.8.24;
 import {Script, console} from "forge-std/Script.sol";
 import {TestExt} from "lib/forge-zksync-std/src/TestExt.sol";
 import {NanoMusicStore} from "../src/NanoMusicStore.sol";
-import {NanoAnimalCare} from "../src/NanoAnimalCare.sol";
+import {NanoBand} from "../src/NanoBand.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-// Deploy with:
+// ⚠️  DEPRECATED: Use DeployTestnet.s.sol or DeployMainnet.s.sol instead
+// This script is kept for reference only. The separate scripts provide better safety.
+//
+// Old command (DO NOT USE):
 // source .env && forge script ./script/Deploy.s.sol --rpc-url $SOPHON_TESTNET_RPC_URL --private-key $WALLET_PRIVATE_KEY --zksync --broadcast --verify --verifier-api-key $ETHERSCAN_SOPHON_API_KEY --verifier-url https://explorer.testnet.sophon.xyz/api
 contract DeployScript is Script, TestExt {
     // Configuration
@@ -75,19 +78,19 @@ contract DeployScript is Script, TestExt {
         ERC1967Proxy musicStoreProxy = new ERC1967Proxy(address(musicStoreImpl), initData);
         console.log("   Proxy:", address(musicStoreProxy));
 
-        // Deploy NanoAnimalCare implementation
-        console.log("\n4. Deploying NanoAnimalCare implementation...");
+        // Deploy NanoBand implementation
+        console.log("\n4. Deploying NanoBand implementation...");
         vmExt.zkUsePaymaster(paymaster, paymasterInput);
-        NanoAnimalCare animalCareImpl = new NanoAnimalCare();
-        console.log("   Implementation:", address(animalCareImpl));
+        NanoBand nanoBandImpl = new NanoBand();
+        console.log("   Implementation:", address(nanoBandImpl));
 
         // Deploy proxy and initialize
-        console.log("\n5. Deploying NanoAnimalCare proxy...");
-        bytes memory animalInitData = abi.encodeWithSelector(NanoAnimalCare.initialize.selector, usdcAddress, deployer);
+        console.log("\n5. Deploying NanoBand proxy...");
+        bytes memory bandInitData = abi.encodeWithSelector(NanoBand.initialize.selector, usdcAddress, deployer);
         vmExt.zkUsePaymaster(paymaster, paymasterInput);
 
-        ERC1967Proxy animalCareProxy = new ERC1967Proxy(address(animalCareImpl), animalInitData);
-        console.log("   Proxy:", address(animalCareProxy));
+        ERC1967Proxy nanoBandProxy = new ERC1967Proxy(address(nanoBandImpl), bandInitData);
+        console.log("   Proxy:", address(nanoBandProxy));
 
         vm.stopBroadcast();
 
@@ -103,9 +106,9 @@ contract DeployScript is Script, TestExt {
         console.log("NanoMusicStore:");
         console.log("  Implementation:", address(musicStoreImpl));
         console.log("  Proxy:", address(musicStoreProxy));
-        console.log("\nNanoAnimalCare:");
-        console.log("  Implementation:", address(animalCareImpl));
-        console.log("  Proxy:", address(animalCareProxy));
+        console.log("\nNanoBand:");
+        console.log("  Implementation:", address(nanoBandImpl));
+        console.log("  Proxy:", address(nanoBandProxy));
 
         console.log("\n========================================");
         console.log("Next Steps:");

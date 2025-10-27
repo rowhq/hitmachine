@@ -22,8 +22,8 @@ export const NETWORKS = {
     contracts: {
       storeContract:
         "0x86E1D788FFCd8232D85dD7eB02c508e7021EB474" as `0x${string}`, // NanoMusicStore Proxy
-      animalCareContract:
-        "0xAAfD6b707770BC9F60A773405dE194348B6C4392" as `0x${string}`, // NanoAnimalCare Proxy
+      bandContract:
+        "0xAAfD6b707770BC9F60A773405dE194348B6C4392" as `0x${string}`, // NanoBand Proxy
       usdcAddress:
         "0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f" as `0x${string}`, // MockUSDC
       paymasterAddress:
@@ -38,7 +38,7 @@ export const NETWORKS = {
     contracts: {
       storeContract:
         "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5" as `0x${string}`, // NanoMusicStore Proxy
-      animalCareContract: "" as `0x${string}`, // TODO: Deploy and add mainnet address
+      bandContract: "" as `0x${string}`, // TODO: Deploy and add mainnet address
       usdcAddress:
         "0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F" as `0x${string}`, // Mainnet USDC
       paymasterAddress:
@@ -62,7 +62,7 @@ export const areContractsDeployed = () => {
   const contracts = CURRENT_NETWORK.contracts;
   return !!(
     contracts.storeContract &&
-    contracts.animalCareContract &&
+    contracts.bandContract &&
     contracts.usdcAddress
   );
 };

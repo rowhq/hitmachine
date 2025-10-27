@@ -33,8 +33,8 @@ flowchart TB
 
 ### The Cycle ♻️
 
-1. **Nano pays worker** → Jobs contract sends 32 USDC to worker
-2. **Worker buys albums** → Uses 32 USDC to purchase 4 albums @ $8 each
+1. **Nano pays worker** → Jobs contract sends 31.96 USDC to worker
+2. **Worker buys albums** → Uses 31.96 USDC to purchase 4 albums @ $7.99 each
 3. **Nano claims commission** → After sales accumulate, claims 1000+ USDC back to Jobs
 4. **Repeat** → Jobs contract now has funds for 30+ more workers
 
@@ -61,7 +61,7 @@ forge script script/Deploy.s.sol --rpc-url <RPC_URL> --broadcast --zksync
 
 ```solidity
 // Jobs Contract
-Jobs.payForJob(workerAddress)  // Pay 32 USDC to worker
+Jobs.payForJob(workerAddress)  // Pay 31.96 USDC to worker
 
 // Store Contract  
 Store.buyAlbums()  // Purchase albums with USDC

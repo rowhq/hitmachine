@@ -27,8 +27,8 @@ Tax ID/SSN: [Tax ID]
 
 ## 2. COMPENSATION
 
-2.1 **Payment Structure**: 
-- Contractor will receive 32 USDC per completed job
+2.1 **Payment Structure**:
+- Contractor will receive 31.96 USDC per completed job
 - Payment is made through the Jobs Contract on the Sophon blockchain
 - Contractor wallet address: [Wallet Address]
 
@@ -178,7 +178,7 @@ Date: _____________
 
 | Service | Payment | Delivery Method |
 |---------|---------|-----------------|
-| User Acquisition Job | 32 USDC | Jobs Contract |
+| User Acquisition Job | 31.96 USDC | Jobs Contract |
 | Additional Services | As Agreed | As Agreed |
 
 ## EXHIBIT B: CONTRACTOR INFORMATION

@@ -36,7 +36,7 @@ Required environment variables:
 ## Architecture Overview
 
 ### Smart Contract Layer
-- **StoreV2.sol**: Main contract handling gift card purchases at 32 USDC per gift card
+- **StoreV2.sol**: Main contract handling gift card purchases at 31.96 USDC per gift card
   - Uses USDC token at `0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F`
   - Deployed to `0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5` on Sophon mainnet
   - Tracks purchases via `hasPurchased` mapping
@@ -45,7 +45,7 @@ Required environment variables:
 ### API Endpoints (Vercel Functions)
 1. **generate-account.ts**: Creates new wallets and funds them
    - Derives HD wallets from mnemonic using incremental index
-   - Funds with 32 USDC and 2 SOPH for gas
+   - Funds with 31.96 USDC and 2 SOPH for gas
    - Pre-approves USDC spending for the Store contract
    - Stores wallet address-to-index mapping in Vercel KV
 

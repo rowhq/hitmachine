@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Script, console} from "forge-std/Script.sol";
 import {TestExt} from "lib/forge-zksync-std/src/TestExt.sol";
 import {NanoMusicStore} from "../src/NanoMusicStore.sol";
-import {NanoAnimalCare} from "../src/NanoAnimalCare.sol";
+import {NanoBand} from "../src/NanoBand.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 // Upgrade with:
@@ -22,7 +22,7 @@ contract UpgradeScript is Script, TestExt {
 
         // Get proxy addresses from environment variables
         address musicStoreProxy = vm.envAddress("MUSIC_STORE_PROXY");
-        address animalCareProxy = vm.envAddress("ANIMAL_CARE_PROXY");
+        address bandProxy = vm.envAddress("BAND_PROXY");
 
         // Determine network
         uint256 chainId = block.chainid;
@@ -41,7 +41,7 @@ contract UpgradeScript is Script, TestExt {
         console.log("========================================");
         console.log("\nProxy Addresses:");
         console.log("NanoMusicStore Proxy:", musicStoreProxy);
-        console.log("NanoAnimalCare Proxy:", animalCareProxy);
+        console.log("NanoBand Proxy:", bandProxy);
         console.log("========================================");
 
         vm.startBroadcast(deployerPrivateKey);
@@ -50,12 +50,12 @@ contract UpgradeScript is Script, TestExt {
         bytes memory paymasterInput = abi.encodeWithSelector(bytes4(keccak256("general(bytes)")), bytes("0x"));
 
         // Get current implementations
-        address currentMusicStoreImpl = ERC1967Utils.getImplementation();
-        address currentAnimalCareImpl = ERC1967Utils.getImplementation();
+        address currentMusicStoreImpl = ERC1967Utils.getImplementation(musicStoreProxy);
+        address currentBandImpl = ERC1967Utils.getImplementation(bandProxy);
 
         console.log("\nCurrent Implementations:");
         console.log("NanoMusicStore:", currentMusicStoreImpl);
-        console.log("NanoAnimalCare:", currentAnimalCareImpl);
+        console.log("NanoBand:", currentBandImpl);
 
         // Deploy new NanoMusicStore implementation
         console.log("\n1. Deploying new NanoMusicStore implementation...");
@@ -63,11 +63,11 @@ contract UpgradeScript is Script, TestExt {
         NanoMusicStore newMusicStoreImpl = new NanoMusicStore();
         console.log("   New Implementation:", address(newMusicStoreImpl));
 
-        // Deploy new NanoAnimalCare implementation
-        console.log("\n2. Deploying new NanoAnimalCare implementation...");
+        // Deploy new NanoBand implementation
+        console.log("\n2. Deploying new NanoBand implementation...");
         vmExt.zkUsePaymaster(paymaster, paymasterInput);
-        NanoAnimalCare newAnimalCareImpl = new NanoAnimalCare();
-        console.log("   New Implementation:", address(newAnimalCareImpl));
+        NanoBand newBandImpl = new NanoBand();
+        console.log("   New Implementation:", address(newBandImpl));
 
         // Upgrade NanoMusicStore
         console.log("\n3. Upgrading NanoMusicStore...");
@@ -76,12 +76,12 @@ contract UpgradeScript is Script, TestExt {
         musicStore.upgradeToAndCall(address(newMusicStoreImpl), "");
         console.log("   NanoMusicStore upgraded successfully");
 
-        // Upgrade NanoAnimalCare
-        console.log("\n4. Upgrading NanoAnimalCare...");
-        NanoAnimalCare animalCare = NanoAnimalCare(animalCareProxy);
+        // Upgrade NanoBand
+        console.log("\n4. Upgrading NanoBand...");
+        NanoBand band = NanoBand(bandProxy);
         vmExt.zkUsePaymaster(paymaster, paymasterInput);
-        animalCare.upgradeToAndCall(address(newAnimalCareImpl), "");
-        console.log("    NanoAnimalCare upgraded successfully");
+        band.upgradeToAndCall(address(newBandImpl), "");
+        console.log("    NanoBand upgraded successfully");
 
         vm.stopBroadcast();
 
@@ -91,7 +91,7 @@ contract UpgradeScript is Script, TestExt {
         console.log("========================================");
         console.log("\nNew Implementations:");
         console.log("NanoMusicStore:", address(newMusicStoreImpl));
-        console.log("NanoAnimalCare:", address(newAnimalCareImpl));
+        console.log("NanoBand:", address(newBandImpl));
 
         console.log("\n========================================");
         console.log("Next Steps:");
@@ -105,7 +105,7 @@ contract UpgradeScript is Script, TestExt {
         console.log("========================================");
         console.log("\nFor Sophon Testnet:");
         console.log("export MUSIC_STORE_PROXY=<YOUR_MUSIC_STORE_PROXY_ADDRESS>");
-        console.log("export ANIMAL_CARE_PROXY=<YOUR_ANIMAL_CARE_PROXY_ADDRESS>");
+        console.log("export BAND_PROXY=<YOUR_BAND_PROXY_ADDRESS>");
         console.log("source .env && forge script ./script/Upgrade.s.sol \\");
         console.log("  --rpc-url $SOPHON_TESTNET_RPC_URL \\");
         console.log("  --private-key $WALLET_PRIVATE_KEY \\");
@@ -116,7 +116,7 @@ contract UpgradeScript is Script, TestExt {
         console.log("  --verifier-url https://explorer.testnet.sophon.xyz/api");
         console.log("\nFor Sophon Mainnet:");
         console.log("export MUSIC_STORE_PROXY=<YOUR_MUSIC_STORE_PROXY_ADDRESS>");
-        console.log("export ANIMAL_CARE_PROXY=<YOUR_ANIMAL_CARE_PROXY_ADDRESS>");
+        console.log("export BAND_PROXY=<YOUR_BAND_PROXY_ADDRESS>");
         console.log("source .env && forge script ./script/Upgrade.s.sol \\");
         console.log("  --rpc-url $SOPHON_MAINNET_RPC_URL \\");
         console.log("  --private-key $WALLET_PRIVATE_KEY \\");

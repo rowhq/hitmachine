@@ -43,7 +43,7 @@ contract NanoMusicStore is
         __Pausable_init();
 
         usdc = IERC20(_usdc);
-        giftcardPrice = _initialPrice; // Should be 32 * 10**6 for $32 gift card
+        giftcardPrice = _initialPrice; // Should be 31.96 * 10**6 for $31.96 gift card
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(ADMIN_ROLE, _admin);

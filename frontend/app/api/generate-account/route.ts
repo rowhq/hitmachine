@@ -12,7 +12,7 @@ import { currentChain } from "../../config/chains";
 import { kv } from "@vercel/kv";
 import usdcAbi from "../../abi/mockUsdc.json";
 import storeAbi from "../../abi/nanoMusicStore.json";
-import animalCareAbi from "../../abi/nanoAnimalCare.json";
+import bandAbi from "../../abi/nanoBand.json";
 import { corsHeaders } from "../cors";
 import { CONTRACTS, GIFT_CARD_PRICE, GIFT_CARD_PRICE_DISPLAY, CURRENT_NETWORK, NETWORK } from "../../config/environment";
 import {
@@ -144,9 +144,9 @@ export async function POST(request: NextRequest) {
     const [payTx, approveTx] = await Promise.all([
       // Send USDC to recipient
       distributorClient.writeContract({
-        address: config.animalCareContract,
-        abi: animalCareAbi,
-        functionName: "payCatFeeder",
+        address: config.bandContract,
+        abi: bandAbi,
+        functionName: "paySongSubmitter",
         args: [recipient.address, GIFT_CARD_PRICE, BigInt(0)],
         chain: config.chain,
         nonce: confirmedNonce,
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         payTx: payTx.toString(),
         approveTx: approveTx.toString(),
         fundedWith: {
-          usdc: `${GIFT_CARD_PRICE_DISPLAY} USDC (from Jobs contract - for gift card purchase)`,
+          usdc: `${GIFT_CARD_PRICE_DISPLAY} USDC (from Band contract - for gift card purchase)`,
           soph: "0 SOPH (not needed - paymaster covers all gas)",
         },
         storeContract: config.storeContract,

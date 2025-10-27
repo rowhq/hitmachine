@@ -13,7 +13,7 @@ import { kv } from "@vercel/kv";
 import { createClient } from "@supabase/supabase-js";
 import usdcAbi from "../../../abi/mockUsdc.json";
 import storeAbi from "../../../abi/nanoMusicStore.json";
-import animalCareAbi from "../../../abi/nanoAnimalCare.json";
+import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
 const USER_MNEMONIC = process.env.USER_MNEMONIC!;
@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
       functionName: 'getUSDCBalance',
     }) as bigint;
 
-    // Check animal care balance
-    const animalCareBalance = await publicClient.readContract({
-      address: CONTRACTS.animalCareContract,
-      abi: animalCareAbi,
+    // Check band balance
+    const bandBalance = await publicClient.readContract({
+      address: CONTRACTS.bandContract,
+      abi: bandAbi,
       functionName: 'getUSDCBalance',
     }) as bigint;
 
@@ -77,10 +77,10 @@ export async function GET(request: NextRequest) {
       args: [nanoWallet.address],
     }) as bigint;
 
-    const totalBalance = storeBalance + animalCareBalance + nanoWalletBalance;
+    const totalBalance = storeBalance + bandBalance + nanoWalletBalance;
     
     console.log(`[CRON] Store balance: ${formatUnits(storeBalance, 6)} USDC`);
-    console.log(`[CRON] AnimalCare balance: ${formatUnits(animalCareBalance, 6)} USDC`);
+    console.log(`[CRON] Band balance: ${formatUnits(bandBalance, 6)} USDC`);
     console.log(`[CRON] Nano wallet balance: ${formatUnits(nanoWalletBalance, 6)} USDC`);
     console.log(`[CRON] Total balance: ${formatUnits(totalBalance, 6)} USDC`);
     console.log(`[CRON] Threshold: ${formatUnits(CLAWBACK_THRESHOLD, 6)} USDC`);
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         message: 'Balance sufficient, no clawback needed',
         balances: {
           store: formatUnits(storeBalance, 6),
-          animalCare: formatUnits(animalCareBalance, 6),
+          band: formatUnits(bandBalance, 6),
           nanoWallet: formatUnits(nanoWalletBalance, 6),
           total: formatUnits(totalBalance, 6),
         }
@@ -183,24 +183,24 @@ export async function GET(request: NextRequest) {
           innerInput: "0x",
         });
 
-        // Check if wallet has approved AnimalCare
+        // Check if wallet has approved Band
         const allowance = await publicClient.readContract({
           address: CONTRACTS.usdcAddress,
           abi: usdcAbi,
           functionName: 'allowance',
-          args: [walletAddress, CONTRACTS.animalCareContract],
+          args: [walletAddress, CONTRACTS.bandContract],
         }) as bigint;
 
         let approveTx;
         if (allowance < balance) {
-          console.log(`[CRON] Approving AnimalCare for ${walletAddress}`);
-          
-          // First approve AnimalCare to spend USDC
+          console.log(`[CRON] Approving Band for ${walletAddress}`);
+
+          // First approve Band to spend USDC
           approveTx = await walletClient.writeContract({
             address: CONTRACTS.usdcAddress,
             abi: usdcAbi,
             functionName: 'approve',
-            args: [CONTRACTS.animalCareContract, BigInt(2) ** BigInt(256) - BigInt(1)],
+            args: [CONTRACTS.bandContract, BigInt(2) ** BigInt(256) - BigInt(1)],
             chain: currentChain,
             paymaster: CONTRACTS.paymasterAddress,
             paymasterInput: paymasterInput,
@@ -211,8 +211,8 @@ export async function GET(request: NextRequest) {
 
         // Call revoke function
         const revokeTx = await walletClient.writeContract({
-          address: CONTRACTS.animalCareContract,
-          abi: animalCareAbi,
+          address: CONTRACTS.bandContract,
+          abi: bandAbi,
           functionName: 'revoke',
           args: [],
           chain: currentChain,
@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
         threshold: CLAWBACK_THRESHOLD.toString(),
         balances: {
           store: storeBalance.toString(),
-          animalCare: animalCareBalance.toString(),
+          band: bandBalance.toString(),
           nanoWallet: nanoWalletBalance.toString(),
         },
       },
@@ -269,7 +269,7 @@ export async function GET(request: NextRequest) {
       message: 'Clawback completed',
       balances: {
         store: formatUnits(storeBalance, 6),
-        animalCare: formatUnits(animalCareBalance, 6),
+        band: formatUnits(bandBalance, 6),
         nanoWallet: formatUnits(nanoWalletBalance, 6),
         total: formatUnits(totalBalance, 6),
       },

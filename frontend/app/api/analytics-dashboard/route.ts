@@ -4,11 +4,11 @@ import { createPublicClient, http } from 'viem';
 import { sophonTestnet } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/nanoMusicStore.json';
-import jobsAbi from '../../abi/nanoAnimalCare.json';
+import bandAbi from '../../abi/nanoBand.json';
 import { corsHeaders } from '../cors';
 
 const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x86E1D788FFCd8232D85dD7eB02c508e7021EB474') as `0x${string}`; // NanoMusicStore Proxy
-const JOBS_CONTRACT = (process.env.NEXT_PUBLIC_JOBS_CONTRACT || '0xAAfD6b707770BC9F60A773405dE194348B6C4392') as `0x${string}`; // NanoAnimalCare Proxy
+const BAND_CONTRACT = (process.env.NEXT_PUBLIC_BAND_CONTRACT || '0xAAfD6b707770BC9F60A773405dE194348B6C4392') as `0x${string}`; // NanoBand Proxy
 const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f') as `0x${string}`; // MockUSDC
 const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
             totalPurchases,
             giftcardPrice,
             storeBalance,
-            jobsBalance
+            bandBalance
         ] = await Promise.all([
             publicClient.readContract({
                 address: STORE_CONTRACT,
@@ -54,8 +54,8 @@ export async function GET(request: NextRequest) {
                 functionName: 'getContractBalance',
             }) as Promise<bigint>,
             publicClient.readContract({
-                address: JOBS_CONTRACT,
-                abi: jobsAbi,
+                address: BAND_CONTRACT,
+                abi: bandAbi,
                 functionName: 'getUSDCBalance',
             }) as Promise<bigint>,
         ]);
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
                 giftcardPrice: (Number(giftcardPrice) / 1e6).toFixed(2) + ' USDC',
                 totalRevenue: totalRevenue.toFixed(2) + ' USDC',
                 storeBalance: (Number(storeBalance) / 1e6).toFixed(2) + ' USDC',
-                jobsBalance: (Number(jobsBalance) / 1e6).toFixed(2) + ' USDC',
+                bandBalance: (Number(bandBalance) / 1e6).toFixed(2) + ' USDC',
             },
             wallets: {
                 totalGenerated: totalWalletsGenerated || 0,
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
             traffic: ipTrackingData,
             contracts: {
                 store: STORE_CONTRACT,
-                jobs: JOBS_CONTRACT,
+                band: BAND_CONTRACT,
                 usdc: USDC_ADDRESS
             },
             timestamp: new Date().toISOString()
