@@ -16,10 +16,6 @@ contract SendSOPHScript is Script {
         uint256 deployerPrivateKey = vm.envUint("w2");
         address deployer = vm.addr(deployerPrivateKey);
 
-        uint256 balance = deployer.balance;
-        // Keep 60 SOPH for transaction fees, send 90% of what's left
-        uint256 keepAmount = 60e18;
-        uint256 remaining = balance > keepAmount ? balance - keepAmount : 0;
         uint256 amountToSend = 1;
 
         console.log("========================================");
@@ -27,9 +23,7 @@ contract SendSOPHScript is Script {
         console.log("========================================");
         console.log("Sender (WALLET_PRIVATE_KEY):", deployer);
         console.log("Recipient (wallet2 deployer):", RECIPIENT);
-        console.log("Current Balance:", balance, "wei");
         console.log("Amount to Send:", amountToSend, "wei");
-        console.log("Keeping for fees:", keepAmount, "wei");
         console.log("========================================");
 
         require(amountToSend > 0, "Not enough balance to send");
