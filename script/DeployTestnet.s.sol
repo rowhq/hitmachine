@@ -25,14 +25,16 @@ contract DeployTestnetScript is Script, TestExt {
 
         // Verify we're on testnet
         uint256 chainId = block.chainid;
-        require(chainId == SOPHON_TESTNET_CHAIN_ID, "ERROR: This script is for TESTNET only! Use DeployMainnet.s.sol for mainnet.");
+        require(
+            chainId == SOPHON_TESTNET_CHAIN_ID,
+            "ERROR: This script is for TESTNET only! Use DeployMainnet.s.sol for mainnet."
+        );
 
         console.log("========================================");
         console.log("TESTNET DEPLOYMENT");
         console.log("========================================");
         console.log("Chain ID:", chainId);
         console.log("Deployer (Nano Wallet - Index 0):", deployer);
-        console.log("Deployer Private Key:", vm.toString(deployerPrivateKey));
         console.log("Deployer Balance:", deployer.balance, "wei");
         console.log("========================================");
 
@@ -97,11 +99,15 @@ contract DeployTestnetScript is Script, TestExt {
         musicStore.grantRole(musicStore.MARKETING_BUDGET_ROLE(), marketingAdmin);
         console.log("   [DONE] Granted MARKETING_BUDGET_ROLE to Index 4 on Store");
 
-        // Grant DISTRIBUTOR_ROLE to index 100 on Band
-        console.log("   Granting DISTRIBUTOR_ROLE to index 100...");
-        address distributor = vm.addr(vm.deriveKey(wallet2Mnemonic, uint32(100)));
-        band.grantRole(band.DISTRIBUTOR_ROLE(), distributor);
-        console.log("   [DONE] Granted DISTRIBUTOR_ROLE to Index 100");
+        // Grant DISTRIBUTOR_ROLE to 100 addresses (indices 100-199) on Band
+        console.log("   Granting DISTRIBUTOR_ROLE to 100 addresses (indices 100-199)...");
+        for (uint32 i = 100; i < 200; i++) {
+            address distributor = vm.addr(vm.deriveKey(wallet2Mnemonic, i));
+            band.grantRole(band.DISTRIBUTOR_ROLE(), distributor);
+            if (i == 199) {
+                console.log("   [DONE] Granted DISTRIBUTOR_ROLE to 100 addresses");
+            }
+        }
 
         vm.stopBroadcast();
 
@@ -126,7 +132,9 @@ contract DeployTestnetScript is Script, TestExt {
         console.log("2. [DONE] Roles granted");
         console.log("3. Verify contracts on Sophscan");
         console.log("4. Update frontend config with new addresses");
-        console.log("5. Mint test USDC: cast send", vm.toString(usdcAddress), "'mintTo(address,uint256)' <RECIPIENT> <AMOUNT>");
+        console.log(
+            "5. Mint test USDC: cast send", vm.toString(usdcAddress), "'mintTo(address,uint256)' <RECIPIENT> <AMOUNT>"
+        );
         console.log("========================================");
     }
 }
