@@ -19,9 +19,11 @@ contract DeployMainnetScript is Script, TestExt {
     uint256 constant SOPHON_MAINNET_CHAIN_ID = 50104;
 
     function run() external {
-        // Get wallet2 mnemonic and deployer private key from .env
-        string memory wallet2Mnemonic = vm.envString("wallet2");
-        uint256 deployerPrivateKey = vm.envUint("WALLET_PRIVATE_KEY");
+        // Get PROD_WALLET mnemonic for deployer and role assignments
+        string memory PROD_WALLETMnemonic = vm.envString("PROD_WALLET");
+
+        // Derive deployer private key from PROD_WALLET at index 0
+        uint256 deployerPrivateKey = vm.deriveKey(PROD_WALLETMnemonic, uint32(0));
         address deployer = vm.addr(deployerPrivateKey);
 
         // Verify we're on mainnet
@@ -35,7 +37,7 @@ contract DeployMainnetScript is Script, TestExt {
         console.log("MAINNET DEPLOYMENT");
         console.log("========================================");
         console.log("Chain ID:", chainId);
-        console.log("Deployer:", deployer);
+        console.log("Deployer (PROD_WALLET index 0):", deployer);
         console.log("Deployer Balance:", deployer.balance, "wei");
         console.log("========================================");
 
@@ -74,11 +76,54 @@ contract DeployMainnetScript is Script, TestExt {
         ERC1967Proxy nanoBandProxy = new ERC1967Proxy(address(nanoBandImpl), bandInitData);
         console.log("   Proxy:", address(nanoBandProxy));
 
+        // Get contract instances for role granting
+        NanoMusicStore musicStore = NanoMusicStore(address(musicStoreProxy));
+        NanoBand band = NanoBand(address(nanoBandProxy));
+
+        console.log("\n========================================");
+        console.log("GRANTING ROLES");
+        console.log("========================================");
+
+        // Derive admin addresses from PROD_WALLET mnemonic
+        address bandAdmin = vm.addr(vm.deriveKey(PROD_WALLETMnemonic, uint32(2)));
+        address storeAdmin = vm.addr(vm.deriveKey(PROD_WALLETMnemonic, uint32(3)));
+        address marketingAdmin = vm.addr(vm.deriveKey(PROD_WALLETMnemonic, uint32(4)));
+
+        console.log("\nAdmin Addresses (derived from PROD_WALLET mnemonic):");
+        console.log("-------------------");
+        console.log("Index 2 (Band Admin):", bandAdmin);
+        console.log("Index 3 (Store Admin):", storeAdmin);
+        console.log("Index 4 (Marketing):", marketingAdmin);
+        console.log("Indices 100-199 (100 Distributors): will be granted DISTRIBUTOR_ROLE");
+
+        // Grant ADMIN_ROLE to bandAdmin on Band
+        console.log("\n6. Granting ADMIN_ROLE to Index 2 on Band...");
+        band.grantRole(band.ADMIN_ROLE(), bandAdmin);
+        console.log("   [DONE] ADMIN_ROLE granted");
+
+        // Grant ADMIN_ROLE to storeAdmin on Store
+        console.log("\n7. Granting ADMIN_ROLE to Index 3 on Store...");
+        musicStore.grantRole(musicStore.ADMIN_ROLE(), storeAdmin);
+        console.log("   [DONE] ADMIN_ROLE granted");
+
+        // Grant MARKETING_BUDGET_ROLE to marketingAdmin on Store
+        console.log("\n8. Granting MARKETING_BUDGET_ROLE to Index 4 on Store...");
+        musicStore.grantRole(musicStore.MARKETING_BUDGET_ROLE(), marketingAdmin);
+        console.log("   [DONE] MARKETING_BUDGET_ROLE granted");
+
+        // Grant DISTRIBUTOR_ROLE to 100 addresses (indices 100-199)
+        console.log("\n9. Granting DISTRIBUTOR_ROLE to 100 addresses (indices 100-199)...");
+        for (uint32 i = 100; i < 200; i++) {
+            address distributor = vm.addr(vm.deriveKey(PROD_WALLETMnemonic, i));
+            band.grantRole(band.DISTRIBUTOR_ROLE(), distributor);
+        }
+        console.log("   [DONE] DISTRIBUTOR_ROLE granted to all 100 addresses");
+
         vm.stopBroadcast();
 
         // Print deployment summary
         console.log("\n========================================");
-        console.log("MAINNET DEPLOYMENT COMPLETE!");
+        console.log("MAINNET DEPLOYMENT & ROLE GRANTING COMPLETE!");
         console.log("========================================");
         console.log("\nDeployed Contracts:");
         console.log("-------------------");
@@ -90,13 +135,19 @@ contract DeployMainnetScript is Script, TestExt {
         console.log("  Implementation:", address(nanoBandImpl));
         console.log("  Proxy:", address(nanoBandProxy));
 
+        console.log("\nRoles Granted:");
+        console.log("-------------------");
+        console.log("- ADMIN_ROLE on Band -> Index 2");
+        console.log("- ADMIN_ROLE on Store -> Index 3");
+        console.log("- MARKETING_BUDGET_ROLE on Store -> Index 4");
+        console.log("- DISTRIBUTOR_ROLE on Band -> Indices 100-199 (100 addresses)");
+
         console.log("\n========================================");
         console.log("NEXT STEPS:");
         console.log("========================================");
-        console.log("1. Grant roles using GrantRolesMainnet.s.sol");
-        console.log("2. Verify contracts on explorer");
-        console.log("3. Update frontend config with addresses");
-        console.log("4. Fund NanoBand contract with USDC");
+        console.log("1. Verify contracts on explorer");
+        console.log("2. Update frontend config with addresses");
+        console.log("3. Fund NanoBand contract with USDC");
         console.log("========================================");
     }
 }

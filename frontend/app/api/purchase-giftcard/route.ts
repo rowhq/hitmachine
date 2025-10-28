@@ -16,7 +16,7 @@ import {
   incrementCounter
 } from "../../utils/analytics-service";
 
-const USER_MNEMONIC = process.env.USER_MNEMONIC!;
+const PROD_WALLET = process.env.PROD_WALLET!;
 
 // Get network configuration (now unified from environment)
 function getNetworkConfig() {
@@ -118,19 +118,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const account = mnemonicToAccount(USER_MNEMONIC, {
+    const account = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/${index}`,
     });
 
     console.log(`Derived wallet for index ${index}: ${account.address}`);
-
-    // Randomly select a distributor from indices 100-199
-    const distributorIndex = 100 + Math.floor(Math.random() * 100);
-    const distributorAccount = mnemonicToAccount(USER_MNEMONIC, {
-      path: `m/44'/60'/0'/0/${distributorIndex}`,
-    });
-
-    console.log(`Assigned distributor index ${distributorIndex}: ${distributorAccount.address}`);
 
     // Verify the derived wallet matches the input address
     if (account.address.toLowerCase() !== address.toLowerCase()) {
@@ -280,17 +272,6 @@ export async function POST(request: NextRequest) {
       // Track successful purchase
       await trackPurchaseCompleted(request, account.address, purchaseTx.toString(), transactions);
 
-      // Store distributor assignment for fulfillment tracking
-      const fulfillmentKey = `fulfillment:${purchaseTx}`;
-      await kv.set(fulfillmentKey, {
-        buyerAddress: account.address,
-        buyerIndex: index,
-        distributorAddress: distributorAccount.address,
-        distributorIndex: distributorIndex,
-        timestamp: Date.now(),
-        txHash: purchaseTx
-      }, { ex: 86400 }); // Expire after 24 hours
-
       // Additional KV analytics
       await incrementCounter('total_purchases_completed');
 
@@ -303,8 +284,6 @@ export async function POST(request: NextRequest) {
           message: "Gift card purchase transactions sent",
           buyer: account.address,
           index,
-          distributor: distributorAccount.address,
-          distributorIndex: distributorIndex,
           transactions: transactions,
           txHash: purchaseTxObj?.hash, // Main transaction hash for UI
           status: 'pending', // Transactions are pending, not confirmed

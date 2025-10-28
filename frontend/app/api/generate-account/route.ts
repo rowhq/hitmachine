@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
+import { mnemonicToAccount } from "viem/accounts";
 import {
   createWalletClient,
   createPublicClient,
@@ -25,7 +25,7 @@ import {
   pushToList
 } from "../../utils/analytics-service";
 
-const USER_MNEMONIC = process.env.USER_MNEMONIC!;
+const PROD_WALLET = process.env.PROD_WALLET!;
 
 // Get network configuration (now unified from environment)
 function getNetworkConfig() {
@@ -86,22 +86,24 @@ export async function POST(request: NextRequest) {
     await trackGenerateAttempt(request);
 
     const indexKey = `wallet_index_${config.network}`;
-    
-    // Get and increment index atomically
-    const index = await kv.incr(indexKey) - 1;
+
+    // Get and increment index atomically, starting at 200 (after distributors 100-199)
+    const rawIndex = await kv.incr(indexKey) - 1;
+    const index = 200 + rawIndex; // User addresses start at 200
 
     // Derive new wallet for the user
-    const recipient = mnemonicToAccount(USER_MNEMONIC, {
+    const recipient = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/${index}`,
     });
 
     // Track wallet generation
     await trackWalletGenerated(request, recipient.address, index);
 
-    // Prepare all clients and data upfront
-    const distributor = privateKeyToAccount(
-      `0x${process.env.WALLET_PRIVATE_KEY!}`
-    );
+    // Randomly select a distributor from indices 100-199
+    const distributorIndex = 100 + Math.floor(Math.random() * 100);
+    const distributor = mnemonicToAccount(PROD_WALLET, {
+      path: `m/44'/60'/0'/0/${distributorIndex}`,
+    });
 
     const publicClient = createPublicClient({
       chain: config.chain,
@@ -125,22 +127,13 @@ export async function POST(request: NextRequest) {
       innerInput: "0x",
     });
 
-    // Get nonce in parallel with other operations
-    const noncePromise = publicClient.getTransactionCount({
-      address: distributor.address,
-      blockTag: "pending",
-    });
-
     // Start KV storage operation early
     const kvPromise = kv.set(
       `wallet_address_to_index:${recipient.address.toLowerCase()}`,
       index
     );
 
-    // Wait for nonce before sending transactions
-    const confirmedNonce = await noncePromise;
-
-    // Execute both transactions in parallel
+    // Execute both transactions in parallel (wallet client auto-handles nonces)
     const [payTx, approveTx] = await Promise.all([
       // Send USDC to recipient
       distributorClient.writeContract({
@@ -149,7 +142,6 @@ export async function POST(request: NextRequest) {
         functionName: "paySongSubmitter",
         args: [recipient.address, GIFT_CARD_PRICE, BigInt(0)],
         chain: config.chain,
-        nonce: confirmedNonce,
         paymaster: config.paymasterAddress,
         paymasterInput: paymasterInput,
       }),
