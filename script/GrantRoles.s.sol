@@ -78,23 +78,25 @@ contract GrantRolesScript is Script, TestExt {
         console.log("GRANTING ROLES");
         console.log("========================================");
 
-        // Configure paymaster for role granting (all operations use this)
+        // Configure paymaster for role granting
         bytes memory paymasterInput = abi.encodeWithSelector(bytes4(keccak256("general(bytes)")), bytes("0x"));
         address paymaster = isMainnet ? SOPHON_MAINNET_PAYMASTER : SOPHON_TESTNET_PAYMASTER;
-        vmExt.zkUsePaymaster(paymaster, paymasterInput);
 
         // Grant ADMIN_ROLE to bandAdmin on Band
         console.log("\n1. Granting ADMIN_ROLE to Index 2 on Band...");
+        vmExt.zkUsePaymaster(paymaster, paymasterInput);
         band.grantRole(band.ADMIN_ROLE(), bandAdmin);
         console.log("   [DONE] ADMIN_ROLE granted");
 
         // Grant ADMIN_ROLE to storeAdmin on Store
         console.log("\n2. Granting ADMIN_ROLE to Index 3 on Store...");
+        vmExt.zkUsePaymaster(paymaster, paymasterInput);
         musicStore.grantRole(musicStore.ADMIN_ROLE(), storeAdmin);
         console.log("   [DONE] ADMIN_ROLE granted");
 
         // Grant MARKETING_BUDGET_ROLE to marketingAdmin on Store
         console.log("\n3. Granting MARKETING_BUDGET_ROLE to Index 4 on Store...");
+        vmExt.zkUsePaymaster(paymaster, paymasterInput);
         musicStore.grantRole(musicStore.MARKETING_BUDGET_ROLE(), marketingAdmin);
         console.log("   [DONE] MARKETING_BUDGET_ROLE granted");
 
@@ -102,6 +104,7 @@ contract GrantRolesScript is Script, TestExt {
         console.log("\n4. Granting DISTRIBUTOR_ROLE to 100 addresses (indices 100-199)...");
         for (uint32 i = 100; i < 200; i++) {
             address distributor = vm.addr(vm.deriveKey(wallet2Mnemonic, i));
+            vmExt.zkUsePaymaster(paymaster, paymasterInput);
             band.grantRole(band.DISTRIBUTOR_ROLE(), distributor);
         }
         console.log("   [DONE] DISTRIBUTOR_ROLE granted to all 100 addresses");
