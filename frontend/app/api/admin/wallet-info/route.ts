@@ -49,13 +49,13 @@ export async function GET() {
       },
     ];
 
-    // Add distributor wallets (100-102 as examples)
+    // Add distributor wallets (100-102 as examples, actual range is 100-199)
     for (let i = 100; i < 103; i++) {
       wallets.push({
         index: i,
         account: mnemonicToAccount(PROD_WALLET, { path: `m/44'/60'/0'/0/${i}` }),
         role: "Distributor",
-        description: `Distributor wallet ${i} - has DISTRIBUTOR_ROLE on Band`,
+        description: `Distributor ${i} - has DISTRIBUTOR_ROLE (100-199 total)`,
       });
     }
 

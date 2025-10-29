@@ -166,8 +166,40 @@ export default function AdminDashboard() {
         {/* Role Assignments */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">
-            Complete Role Assignments (All from PROD_WALLET Mnemonic)
+            Complete Wallet Allocation & Role Assignments
           </h2>
+
+          {/* Wallet Allocation */}
+          <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-gray-800 mb-3">
+              Wallet Index Allocation (from PROD_WALLET Mnemonic)
+            </h3>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-semibold">Index 0:</span> Deployer/Nano/Admin
+              </div>
+              <div>
+                <span className="font-semibold">Index 1:</span> <span className="text-gray-500">UNUSED</span>
+              </div>
+              <div>
+                <span className="font-semibold">Index 2:</span> Band Admin
+              </div>
+              <div>
+                <span className="font-semibold">Index 3:</span> Store Admin
+              </div>
+              <div>
+                <span className="font-semibold">Index 4:</span> Marketing Budget
+              </div>
+              <div>
+                <span className="font-semibold">Indices 100-199:</span> Distributors (100 wallets)
+              </div>
+              <div className="col-span-2">
+                <span className="font-semibold">Indices 200+:</span> User wallets (generated dynamically)
+              </div>
+            </div>
+          </div>
+
+          {/* Role Assignments */}
           <div className="grid grid-cols-2 gap-6">
             <div>
               <h3 className="font-semibold text-gray-800 mb-3 text-lg">
