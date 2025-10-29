@@ -49,13 +49,18 @@ export async function GET(request: NextRequest) {
       transport: http(CURRENT_NETWORK.rpcUrl),
     });
 
-    // Derive nano wallet (index 0) from prod wallet mnemonic
-    // Note: Index 0 is also the deployer and has WITHDRAWER_ROLE on Store contract
+    // Derive nano wallet (index 0) - receives funds from Store
     const nanoWallet = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/0`,
     });
 
-    console.log(`[CRON] Nano/Admin wallet address (index 0): ${nanoWallet.address}`);
+    // Derive marketing admin wallet (index 4) - has MARKETING_BUDGET_ROLE on Store
+    const marketingWallet = mnemonicToAccount(PROD_WALLET, {
+      path: `m/44'/60'/0'/0/4`,
+    });
+
+    console.log(`[CRON] Nano wallet address (index 0): ${nanoWallet.address}`);
+    console.log(`[CRON] Marketing wallet address (index 4): ${marketingWallet.address}`);
 
     // Check store balance
     const storeBalance = await publicClient.readContract({
@@ -85,8 +90,14 @@ export async function GET(request: NextRequest) {
 
     const transactions = [];
 
-    // Initialize nano wallet client
-    // Note: This is also the admin/deployer wallet (index 0) with WITHDRAWER_ROLE
+    // Initialize marketing wallet client (index 4 with MARKETING_BUDGET_ROLE)
+    const marketingWalletClient = createWalletClient({
+      account: marketingWallet,
+      chain: currentChain,
+      transport: http(CURRENT_NETWORK.rpcUrl),
+    }).extend(eip712WalletActions());
+
+    // Initialize nano wallet client for Band refills
     const nanoWalletClient = createWalletClient({
       account: nanoWallet,
       chain: currentChain,
@@ -100,14 +111,15 @@ export async function GET(request: NextRequest) {
     // Check if store has > 3k USDC
     if (storeBalance > STORE_WITHDRAWAL_THRESHOLD) {
       const withdrawAmount = storeBalance - BigInt(100 * 1e6); // Leave 100 USDC in store
-      console.log(`[CRON] Withdrawing ${formatUnits(withdrawAmount, 6)} USDC from Store to nano wallet`);
+      console.log(`[CRON] Paying ${formatUnits(withdrawAmount, 6)} USDC from Store to nano wallet via marketing budget`);
 
       try {
-        // Call withdrawFunds using nano wallet (which has WITHDRAWER_ROLE as deployer)
-        const withdrawTx = await nanoWalletClient.writeContract({
+        // Call payMarketing using marketing wallet (index 4 with MARKETING_BUDGET_ROLE)
+        // This pays from Store contract to nano wallet (index 0)
+        const paymentTx = await marketingWalletClient.writeContract({
           address: CONTRACTS.storeContract,
           abi: storeAbi,
-          functionName: 'withdrawFunds',
+          functionName: 'payMarketing',
           args: [nanoWallet.address, withdrawAmount],
           chain: currentChain,
           paymaster: CONTRACTS.paymasterAddress,
@@ -115,28 +127,30 @@ export async function GET(request: NextRequest) {
         });
 
         transactions.push({
-          type: 'store_withdrawal',
+          type: 'store_marketing_payment',
           amount: formatUnits(withdrawAmount, 6),
-          txHash: withdrawTx,
+          txHash: paymentTx,
+          from: 'marketing_wallet_index_4',
           to: nanoWallet.address,
         });
 
-        console.log(`[CRON] Store withdrawal tx: ${withdrawTx}`);
+        console.log(`[CRON] Store marketing payment tx: ${paymentTx}`);
 
         // Log to Supabase
         await supabase.from('wallet_events').insert({
-          event_type: 'store_withdrawal',
+          event_type: 'store_marketing_payment',
           metadata: {
             amount: withdrawAmount.toString(),
-            tx_hash: withdrawTx,
+            tx_hash: paymentTx,
             from: 'store_contract',
+            via: marketingWallet.address,
             to: nanoWallet.address,
             balance_before: storeBalance.toString(),
             network: NETWORK,
           },
         });
       } catch (error) {
-        console.error('[CRON] Store withdrawal error:', error);
+        console.error('[CRON] Store marketing payment error:', error);
       }
     }
 
