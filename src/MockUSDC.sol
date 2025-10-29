@@ -25,11 +25,8 @@ contract MockUSDC is ERC20, Ownable {
      * Users can mint 1000 USDC every hour
      */
     function mint() external {
-        require(
-            block.timestamp >= lastMintTime[msg.sender] + MINT_COOLDOWN,
-            "Please wait before minting again"
-        );
-        
+        require(block.timestamp >= lastMintTime[msg.sender] + MINT_COOLDOWN, "Please wait before minting again");
+
         lastMintTime[msg.sender] = block.timestamp;
         _mint(msg.sender, MINT_AMOUNT);
     }
@@ -54,10 +51,10 @@ contract MockUSDC is ERC20, Ownable {
     function timeUntilNextMint(address user) external view returns (uint256) {
         uint256 lastMint = lastMintTime[user];
         if (lastMint == 0) return 0;
-        
+
         uint256 nextMintTime = lastMint + MINT_COOLDOWN;
         if (block.timestamp >= nextMintTime) return 0;
-        
+
         return nextMintTime - block.timestamp;
     }
 }

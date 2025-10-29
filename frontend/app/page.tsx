@@ -12,6 +12,7 @@ import PurchaseGiftcard from './components/PurchaseGiftcard';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import PasswordProtection from './components/PasswordProtection';
 import CheckWallet from './components/CheckWallet';
+import ContractAddresses from './components/ContractAddresses';
 
 export default function Home() {
   const { isConnected } = useAccount();
@@ -25,6 +26,11 @@ export default function Home() {
           <ConnectButton />
         </div>
 
+        {/* Contract Configuration Display */}
+        <div className="mb-8">
+          <ContractAddresses />
+        </div>
+
         {/* Connection Test */}
         {isConnected && (
           <div className="mb-8">
@@ -34,7 +40,7 @@ export default function Home() {
 
         {/* Analytics Dashboard */}
         <AnalyticsDashboard />
-        
+
         {/* Stats Overview */}
         <ContractStats />
 

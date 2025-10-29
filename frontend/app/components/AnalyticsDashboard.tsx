@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 
 interface Analytics {
+  network: string;
+  networkName: string;
   blockchain: {
     totalGiftcardsSold: string;
     giftcardPrice: string;
     totalRevenue: string;
     storeBalance: string;
-    jobsBalance: string;
+    bandBalance: string;
   };
   wallets: {
     totalGenerated: number;
@@ -19,13 +21,22 @@ interface Analytics {
   };
   traffic: {
     uniqueVisitors: number;
-    totalPageViews: number;
+    totalEvents: number;
     topCountries: { country: string; count: number }[];
-    recentVisits: any[];
+    recentEvents: any[];
+    conversionFunnel?: {
+      generate_attempts: number;
+      wallets_generated: number;
+      wallets_funded: number;
+      purchase_attempts: number;
+      purchases_completed: number;
+      flows_completed: number;
+      errors_by_stage: Record<string, number>;
+    };
   };
   contracts: {
     store: string;
-    jobs: string;
+    band: string;
     usdc: string;
   };
   timestamp: string;
@@ -95,8 +106,13 @@ export default function AnalyticsDashboard() {
     <div className="space-y-6">
       {/* Title and Refresh */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">📊 Analytics Dashboard</h2>
-        <button 
+        <div>
+          <h2 className="text-2xl font-bold">📊 Analytics Dashboard</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Network: <span className="font-semibold">{analytics.networkName}</span>
+          </p>
+        </div>
+        <button
           onClick={fetchAnalytics}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
         >
@@ -140,8 +156,8 @@ export default function AnalyticsDashboard() {
             <p className="font-medium">{analytics.blockchain.storeBalance}</p>
           </div>
           <div>
-            <p className="text-gray-600">Jobs Balance</p>
-            <p className="font-medium">{analytics.blockchain.jobsBalance}</p>
+            <p className="text-gray-600">Band Balance</p>
+            <p className="font-medium">{analytics.blockchain.bandBalance}</p>
           </div>
           <div>
             <p className="text-gray-600">Total Sold</p>
@@ -163,8 +179,8 @@ export default function AnalyticsDashboard() {
             <p className="text-xl font-bold">{analytics.traffic.uniqueVisitors}</p>
           </div>
           <div>
-            <p className="text-gray-600 text-sm">Page Views</p>
-            <p className="text-xl font-bold">{analytics.traffic.totalPageViews}</p>
+            <p className="text-gray-600 text-sm">Total Events</p>
+            <p className="text-xl font-bold">{analytics.traffic.totalEvents}</p>
           </div>
         </div>
         
@@ -182,16 +198,51 @@ export default function AnalyticsDashboard() {
           </div>
         )}
         
-        {analytics.traffic.recentVisits && analytics.traffic.recentVisits.length > 0 && (
+        {analytics.traffic.recentEvents && analytics.traffic.recentEvents.length > 0 && (
           <div className="mt-4">
-            <h4 className="font-medium text-sm mb-2">Recent Visits</h4>
+            <h4 className="font-medium text-sm mb-2">Recent Events</h4>
             <div className="space-y-1 text-xs">
-              {analytics.traffic.recentVisits.slice(0, 3).map((visit: any, idx: number) => (
+              {analytics.traffic.recentEvents.slice(0, 5).map((event: any, idx: number) => (
                 <div key={idx} className="flex justify-between items-center text-gray-600">
-                  <span>{visit.city ? `${visit.city}, ${visit.country}` : visit.country || 'Unknown'}</span>
-                  <span>{new Date(visit.timestamp).toLocaleTimeString()}</span>
+                  <span>{event.event} {event.wallet ? `(${event.wallet.slice(0, 6)}...${event.wallet.slice(-4)})` : ''}</span>
+                  <span>{new Date(event.timestamp).toLocaleTimeString()}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {analytics.traffic.conversionFunnel && (
+          <div className="mt-4">
+            <h4 className="font-medium text-sm mb-2">Conversion Funnel</h4>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span>Generate Attempts:</span>
+                <span className="font-medium">{analytics.traffic.conversionFunnel.generate_attempts}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Wallets Generated:</span>
+                <span className="font-medium">{analytics.traffic.conversionFunnel.wallets_generated}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Wallets Funded:</span>
+                <span className="font-medium">{analytics.traffic.conversionFunnel.wallets_funded}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Purchases Completed:</span>
+                <span className="font-medium">{analytics.traffic.conversionFunnel.purchases_completed}</span>
+              </div>
+              {Object.keys(analytics.traffic.conversionFunnel.errors_by_stage).length > 0 && (
+                <div className="mt-2 pt-2 border-t">
+                  <span className="font-medium text-red-600">Errors:</span>
+                  {Object.entries(analytics.traffic.conversionFunnel.errors_by_stage).map(([stage, count]) => (
+                    <div key={stage} className="flex justify-between ml-2">
+                      <span>{stage}:</span>
+                      <span className="text-red-600">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -239,7 +290,7 @@ export default function AnalyticsDashboard() {
         <h3 className="text-sm font-semibold mb-2">Contract Addresses</h3>
         <div className="text-xs font-mono space-y-1">
           <p>Store: {analytics.contracts.store}</p>
-          <p>Jobs: {analytics.contracts.jobs}</p>
+          <p>Band: {analytics.contracts.band}</p>
           <p>USDC: {analytics.contracts.usdc}</p>
         </div>
         <p className="text-xs text-gray-500 mt-2">

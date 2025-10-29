@@ -1,0 +1,11 @@
+# Ignore Solidity files - use forge fmt instead
+*.sol
+
+# Ignore build artifacts
+out/
+zkout/
+cache/
+broadcast/
+artifacts/
+lib/
+node_modules/

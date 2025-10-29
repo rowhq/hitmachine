@@ -7,12 +7,7 @@ import "@openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin-upgradeable/contracts/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract NanoMusicStore is
-    Initializable,
-    AccessControlUpgradeable,
-    UUPSUpgradeable,
-    PausableUpgradeable
-{
+contract NanoMusicStore is Initializable, AccessControlUpgradeable, UUPSUpgradeable, PausableUpgradeable {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER_ROLE");
@@ -78,7 +73,7 @@ contract NanoMusicStore is
         require(destination != address(0), "Invalid destination");
         require(amount > 0, "Amount must be greater than 0");
         require(amount <= usdc.balanceOf(address(this)), "Insufficient balance");
-        
+
         require(usdc.transfer(destination, amount), "Marketing payment failed");
         emit MarketingPayment(destination, amount);
     }

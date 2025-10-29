@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, http } from 'viem';
-import { sophonTestnet } from '../../config/chains';
+import { currentChain } from '../../config/chains';
 import { kv } from '@vercel/kv';
 import storeAbi from '../../abi/nanoMusicStore.json';
 import bandAbi from '../../abi/nanoBand.json';
 import { corsHeaders } from '../cors';
+import { CONTRACTS, CURRENT_NETWORK, NETWORK } from '../../config/environment';
 
-const STORE_CONTRACT = (process.env.NEXT_PUBLIC_STORE_CONTRACT || '0x86E1D788FFCd8232D85dD7eB02c508e7021EB474') as `0x${string}`; // NanoMusicStore Proxy
-const BAND_CONTRACT = (process.env.NEXT_PUBLIC_BAND_CONTRACT || '0xAAfD6b707770BC9F60A773405dE194348B6C4392') as `0x${string}`; // NanoBand Proxy
-const USDC_ADDRESS = (process.env.NEXT_PUBLIC_USDC_ADDRESS || '0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f') as `0x${string}`; // MockUSDC
-const RPC_URL = process.env.RPC_URL || 'https://rpc.testnet.sophon.xyz';
+// Use environment configuration
+const STORE_CONTRACT = CONTRACTS.storeContract;
+const BAND_CONTRACT = CONTRACTS.bandContract;
+const USDC_ADDRESS = CONTRACTS.usdcAddress;
+const RPC_URL = CURRENT_NETWORK.rpcUrl;
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, '') || '';
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
     try {
         // Initialize blockchain client
         const publicClient = createPublicClient({
-            chain: sophonTestnet,
+            chain: currentChain,
             transport: http(RPC_URL),
         });
 
@@ -60,17 +62,22 @@ export async function GET(request: NextRequest) {
             }) as Promise<bigint>,
         ]);
 
-        // Get KV analytics data
+        // Get KV analytics data (network-specific)
+        const indexKey = `wallet_index_${NETWORK}`;
+        const uniqueIpsKey = `unique_ips_${NETWORK}`;
+        const totalWalletsKey = `total_wallets_generated_${NETWORK}`;
+        const recentWalletsKey = `recent_wallets_${NETWORK}`;
+
         const [
             uniqueIps,
             totalWalletsGenerated,
             recentWallets,
             walletIndex
         ] = await Promise.all([
-            kv.scard('unique_ips'),
-            kv.get('total_wallets_generated'),
-            kv.lrange('recent_wallets', 0, 9), // Get last 10 wallets
-            kv.get('wallet_index')
+            kv.scard(uniqueIpsKey),
+            kv.get(totalWalletsKey),
+            kv.lrange(recentWalletsKey, 0, 9), // Get last 10 wallets
+            kv.get(indexKey)
         ]);
 
         // Get Supabase IP tracking data from wallet_events
@@ -175,6 +182,8 @@ export async function GET(request: NextRequest) {
         const averageRevenuePerWallet = totalWalletsGenerated ? totalRevenue / Number(totalWalletsGenerated) : 0;
 
         return NextResponse.json({
+            network: NETWORK,
+            networkName: CURRENT_NETWORK.name,
             blockchain: {
                 totalGiftcardsSold: totalPurchases.toString(),
                 giftcardPrice: (Number(giftcardPrice) / 1e6).toFixed(2) + ' USDC',

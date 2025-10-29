@@ -16,8 +16,7 @@ import storeAbi from "../../../abi/nanoMusicStore.json";
 import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
-const USER_MNEMONIC = process.env.USER_MNEMONIC!;
-const ADMIN_MNEMONIC = process.env.ADMIN_MNEMONIC!;
+const PROD_WALLET = process.env.PROD_WALLET!;
 const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC
 const CLAWBACK_AGE_MS = 60 * 60 * 1000; // 1 hour
 
@@ -50,8 +49,8 @@ export async function GET(request: NextRequest) {
       transport: http(CURRENT_NETWORK.rpcUrl),
     });
 
-    // Derive nano wallet (index 0) from admin mnemonic
-    const nanoWallet = mnemonicToAccount(ADMIN_MNEMONIC, {
+    // Derive nano wallet (index 0) from prod wallet mnemonic
+    const nanoWallet = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/0`,
     });
 
@@ -100,8 +99,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`[CRON] Balance below threshold, initiating clawback`);
 
-    // Get all recent wallets from KV
-    const recentWallets = await kv.lrange("recent_wallets", 0, -1);
+    // Get all recent wallets from KV (network-specific)
+    const recentWallets = await kv.lrange(`recent_wallets_${NETWORK}`, 0, -1);
     const oneHourAgo = Date.now() - CLAWBACK_AGE_MS;
     const walletsToCheck: any[] = [];
     
@@ -169,7 +168,7 @@ export async function GET(request: NextRequest) {
         console.log(`[CRON] Clawing back ${formatUnits(balance, 6)} USDC from ${walletAddress}`);
 
         // Derive wallet from mnemonic
-        const account = mnemonicToAccount(USER_MNEMONIC, {
+        const account = mnemonicToAccount(PROD_WALLET, {
           path: `m/44'/60'/0'/0/${walletData.index}`,
         });
 
@@ -240,6 +239,7 @@ export async function GET(request: NextRequest) {
             approve_tx: approveTx,
             index: walletData.index,
             reason: 'low_system_balance',
+            network: NETWORK,
           },
         });
 
@@ -262,6 +262,7 @@ export async function GET(request: NextRequest) {
           band: bandBalance.toString(),
           nanoWallet: nanoWalletBalance.toString(),
         },
+        network: NETWORK,
       },
     });
 
@@ -289,6 +290,7 @@ export async function GET(request: NextRequest) {
       metadata: {
         error: error.message,
         stack: error.stack,
+        network: NETWORK,
       },
     });
 

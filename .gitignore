@@ -11,3 +11,6 @@ supabase/.temp
 *.log
 .DS_Store
 .env*.local
+out
+broadcast
+cache

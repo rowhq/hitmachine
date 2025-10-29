@@ -106,8 +106,9 @@ export async function POST(request: NextRequest) {
     }
 
     const indexKey = `wallet_index_${config.network}`;
-    const maxIndex = await kv.get(indexKey);
-    if (index > Number(maxIndex)) {
+    const rawMaxIndex = await kv.get(indexKey);
+    const maxIndex = 200 + Number(rawMaxIndex); // User addresses start at 200
+    if (index > maxIndex) {
       await trackError(request, 'purchase_attempt', `Index out of bounds: max is ${maxIndex}`, address, {
         index,
         maxIndex
@@ -272,8 +273,8 @@ export async function POST(request: NextRequest) {
       // Track successful purchase
       await trackPurchaseCompleted(request, account.address, purchaseTx.toString(), transactions);
 
-      // Additional KV analytics
-      await incrementCounter('total_purchases_completed');
+      // Additional KV analytics (network-specific)
+      await incrementCounter(`total_purchases_completed_${config.network}`);
 
       // Don't wait for confirmations - return immediately
       // Find the purchase transaction hash for the UI

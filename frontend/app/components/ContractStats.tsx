@@ -5,7 +5,7 @@ import { useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import { config } from '../config';
 import storeAbi from '../abi/nanoMusicStore.json';
-import jobsAbi from '../abi/nanoAnimalCare.json';
+import bandAbi from '../abi/nanoBand.json';
 
 export default function ContractStats() {
   const [apiStats, setApiStats] = useState<any>(null);
@@ -18,22 +18,24 @@ export default function ContractStats() {
   }) as { data: [bigint, bigint, bigint, bigint] | undefined };
   // Returns: [giftcardPrice, totalPurchases, totalRevenue, balance]
 
-  // Jobs/AnimalCare stats - only has getUSDCBalance
-  const { data: jobsBalance } = useReadContract({
-    address: config.JOBS_CONTRACT,
-    abi: jobsAbi,
+  // Band stats - only has getUSDCBalance
+  const { data: bandBalance } = useReadContract({
+    address: config.BAND_CONTRACT,
+    abi: bandAbi,
     functionName: 'getUSDCBalance',
   });
 
-  // Fetch API stats
+  // Fetch API stats - don't fail if endpoint doesn't exist
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const response = await fetch('/api/check-balances');
-        const data = await response.json();
-        setApiStats(data);
+        if (response.ok) {
+          const data = await response.json();
+          setApiStats(data);
+        }
       } catch (err) {
-        console.error('Failed to fetch API stats:', err);
+        // Silently fail - endpoint may not exist
       }
     };
 
@@ -69,14 +71,14 @@ export default function ContractStats() {
         </div>
       </div>
 
-      {/* Jobs Stats */}
+      {/* Band Stats */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-700">Animal Care Contract</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-700">Band Contract</h3>
         <div className="space-y-2">
           <div>
             <p className="text-sm text-gray-500">USDC Balance</p>
             <p className="text-xl font-bold">
-              ${jobsBalance ? formatUnits(jobsBalance as bigint, 6) : '0'} USDC
+              ${bandBalance ? formatUnits(bandBalance as bigint, 6) : '0'} USDC
             </p>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { kv } from "@vercel/kv";
 import { corsHeaders } from "../cors";
 import { getClientIP, getAllIPHeaders } from "../../utils/ip-detection";
 import { trackFlowCompleted, trackError, incrementCounter } from "../../utils/analytics-service";
+import { NETWORK } from "../../config/environment";
 
 
 export async function POST(request: NextRequest) {
@@ -62,11 +63,11 @@ export async function POST(request: NextRequest) {
       headers: getAllIPHeaders(request)
     });
 
-    // Additional KV analytics
+    // Additional KV analytics (network-specific)
     await Promise.all([
-      kv.sadd("completed_flow_ips", ip),
-      incrementCounter("total_flow_completions"),
-      incrementCounter(giftCardPurchased ? "total_purchases_completed" : "total_flows_without_purchase")
+      kv.sadd(`completed_flow_ips_${NETWORK}`, ip),
+      incrementCounter(`total_flow_completions_${NETWORK}`),
+      incrementCounter(giftCardPurchased ? `total_purchases_completed_${NETWORK}` : `total_flows_without_purchase_${NETWORK}`)
     ]);
 
     return NextResponse.json(

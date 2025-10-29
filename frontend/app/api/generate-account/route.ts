@@ -163,11 +163,11 @@ export async function POST(request: NextRequest) {
     // Track wallet funding with transaction hashes
     await trackWalletFunded(request, recipient.address, payTx.toString(), approveTx.toString());
 
-    // Additional KV analytics
+    // Additional KV analytics (network-specific)
     await Promise.all([
-      addToSet("unique_ips", ip),
-      incrementCounter("total_wallets_generated"),
-      pushToList("recent_wallets", {
+      addToSet(`unique_ips_${config.network}`, ip),
+      incrementCounter(`total_wallets_generated_${config.network}`),
+      pushToList(`recent_wallets_${config.network}`, {
         address: recipient.address,
         ip,
         timestamp: new Date().toISOString(),

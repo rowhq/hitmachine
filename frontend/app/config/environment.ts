@@ -21,11 +21,11 @@ export const NETWORKS = {
     explorerUrl: "https://explorer.testnet.sophon.xyz",
     contracts: {
       storeContract:
-        "0x86E1D788FFCd8232D85dD7eB02c508e7021EB474" as `0x${string}`, // NanoMusicStore Proxy
+        "0xe8C61482Ad4412Fc5A0683C8a7E3b751a3e82674" as `0x${string}`, // NanoMusicStore Proxy
       bandContract:
-        "0xAAfD6b707770BC9F60A773405dE194348B6C4392" as `0x${string}`, // NanoBand Proxy
+        "0x417823822aF4D207c91AE54615453e68aE55320a" as `0x${string}`, // NanoBand Proxy
       usdcAddress:
-        "0x3a364f43893C86553574bf28Bcb4a3d7ff0C7c1f" as `0x${string}`, // MockUSDC
+        "0xa38be59C90953E082BF40098356198DD5E8fEfdD" as `0x${string}`, // MockUSDC (address set in deployed contracts)
       paymasterAddress:
         "0x98546B226dbbA8230cf620635a1e4ab01F6A99B2" as `0x${string}`,
     },
@@ -37,8 +37,9 @@ export const NETWORKS = {
     explorerUrl: "https://explorer.sophon.xyz",
     contracts: {
       storeContract:
-        "0x13fBEfAd9EdC68E49806f6FC34f4CA161197b9B5" as `0x${string}`, // NanoMusicStore Proxy
-      bandContract: "" as `0x${string}`, // TODO: Deploy and add mainnet address
+        "0x963842e934594072B0996366c568e37B1Ad5F3f2" as `0x${string}`, // NanoMusicStore Proxy
+      bandContract:
+        "0x66abbc0753595C7301BFd209Bca4b953d6fe274f" as `0x${string}`, // NanoBand Proxy
       usdcAddress:
         "0x9Aa0F72392B5784Ad86c6f3E899bCc053D00Db4F" as `0x${string}`, // Mainnet USDC
       paymasterAddress:

@@ -13,12 +13,12 @@ import { currentChain } from "../../../config/chains";
 import { createClient } from "@supabase/supabase-js";
 import usdcAbi from "../../../abi/mockUsdc.json";
 import storeAbi from "../../../abi/nanoMusicStore.json";
-import animalCareAbi from "../../../abi/nanoAnimalCare.json";
+import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
-const ADMIN_MNEMONIC = process.env.ADMIN_MNEMONIC!;
+const PROD_WALLET = process.env.PROD_WALLET!;
 const STORE_WITHDRAWAL_THRESHOLD = BigInt(3000 * 1e6); // 3,000 USDC
-const ANIMAL_CARE_REFILL_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC
+const BAND_REFILL_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
       transport: http(CURRENT_NETWORK.rpcUrl),
     });
 
-    // Derive nano wallet (index 0) from admin mnemonic
-    const nanoWallet = mnemonicToAccount(ADMIN_MNEMONIC, {
+    // Derive nano wallet (index 0) from prod wallet mnemonic
+    const nanoWallet = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/0`,
     });
     
@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
       functionName: 'getUSDCBalance',
     }) as bigint;
 
-    // Check animal care balance
-    const animalCareBalance = await publicClient.readContract({
-      address: CONTRACTS.animalCareContract,
-      abi: animalCareAbi,
+    // Check band balance
+    const bandBalance = await publicClient.readContract({
+      address: CONTRACTS.bandContract,
+      abi: bandAbi,
       functionName: 'getUSDCBalance',
     }) as bigint;
 
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     }) as bigint;
 
     console.log(`[CRON] Store balance: ${formatUnits(storeBalance, 6)} USDC`);
-    console.log(`[CRON] AnimalCare balance: ${formatUnits(animalCareBalance, 6)} USDC`);
+    console.log(`[CRON] Band balance: ${formatUnits(bandBalance, 6)} USDC`);
     console.log(`[CRON] Nano wallet balance: ${formatUnits(nanoWalletBalance, 6)} USDC`);
 
     const transactions = [];
@@ -141,6 +141,7 @@ export async function GET(request: NextRequest) {
             from: 'store_contract',
             to: nanoWallet.address,
             balance_before: storeBalance.toString(),
+            network: NETWORK,
           },
         });
       } catch (error) {
@@ -148,62 +149,64 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if AnimalCare has < 10k USDC
-    if (animalCareBalance < ANIMAL_CARE_REFILL_THRESHOLD) {
-      const refillAmount = ANIMAL_CARE_REFILL_THRESHOLD - animalCareBalance;
-      
+    // Check if Band has < 10k USDC
+    if (bandBalance < BAND_REFILL_THRESHOLD) {
+      const refillAmount = BAND_REFILL_THRESHOLD - bandBalance;
+
       // Check if nano wallet has enough to refill
       if (nanoWalletBalance >= refillAmount) {
-        console.log(`[CRON] Sending ${formatUnits(refillAmount, 6)} USDC from nano wallet to AnimalCare`);
+        console.log(`[CRON] Sending ${formatUnits(refillAmount, 6)} USDC from nano wallet to Band`);
 
         try {
-          // Transfer USDC from nano wallet to AnimalCare
+          // Transfer USDC from nano wallet to Band
           const transferTx = await nanoWalletClient.writeContract({
             address: CONTRACTS.usdcAddress,
             abi: usdcAbi,
             functionName: 'transfer',
-            args: [CONTRACTS.animalCareContract, refillAmount],
+            args: [CONTRACTS.bandContract, refillAmount],
             chain: currentChain,
             paymaster: CONTRACTS.paymasterAddress,
             paymasterInput: paymasterInput,
           });
 
           transactions.push({
-            type: 'animalcare_refill',
+            type: 'band_refill',
             amount: formatUnits(refillAmount, 6),
             txHash: transferTx,
             from: nanoWallet.address,
-            to: CONTRACTS.animalCareContract,
+            to: CONTRACTS.bandContract,
           });
 
-          console.log(`[CRON] AnimalCare refill tx: ${transferTx}`);
+          console.log(`[CRON] Band refill tx: ${transferTx}`);
 
           // Log to Supabase
           await supabase.from('wallet_events').insert({
-            event_type: 'animalcare_refill',
+            event_type: 'band_refill',
             metadata: {
               amount: refillAmount.toString(),
               tx_hash: transferTx,
               from: nanoWallet.address,
-              to: 'animalcare_contract',
-              balance_before: animalCareBalance.toString(),
+              to: 'band_contract',
+              balance_before: bandBalance.toString(),
               nano_wallet_balance: nanoWalletBalance.toString(),
+              network: NETWORK,
             },
           });
         } catch (error) {
-          console.error('[CRON] AnimalCare refill error:', error);
+          console.error('[CRON] Band refill error:', error);
         }
       } else {
-        console.log(`[CRON] Nano wallet has insufficient balance to refill AnimalCare`);
+        console.log(`[CRON] Nano wallet has insufficient balance to refill Band`);
         console.log(`[CRON] Needed: ${formatUnits(refillAmount, 6)} USDC, Available: ${formatUnits(nanoWalletBalance, 6)} USDC`);
-        
+
         // Log insufficient balance event
         await supabase.from('wallet_events').insert({
-          event_type: 'animalcare_refill_insufficient',
+          event_type: 'band_refill_insufficient',
           metadata: {
             needed_amount: refillAmount.toString(),
             available_amount: nanoWalletBalance.toString(),
-            animalcare_balance: animalCareBalance.toString(),
+            band_balance: bandBalance.toString(),
+            network: NETWORK,
           },
         });
       }
@@ -214,13 +217,14 @@ export async function GET(request: NextRequest) {
       event_type: 'fund_management_summary',
       metadata: {
         store_balance: storeBalance.toString(),
-        animalcare_balance: animalCareBalance.toString(),
+        band_balance: bandBalance.toString(),
         nano_wallet_balance: nanoWalletBalance.toString(),
         transactions: transactions,
         thresholds: {
           store_withdrawal: STORE_WITHDRAWAL_THRESHOLD.toString(),
-          animalcare_refill: ANIMAL_CARE_REFILL_THRESHOLD.toString(),
+          band_refill: BAND_REFILL_THRESHOLD.toString(),
         },
+        network: NETWORK,
       },
     });
 
@@ -228,14 +232,15 @@ export async function GET(request: NextRequest) {
       message: 'Fund management completed',
       balances: {
         store: formatUnits(storeBalance, 6),
-        animalCare: formatUnits(animalCareBalance, 6),
+        band: formatUnits(bandBalance, 6),
         nanoWallet: formatUnits(nanoWalletBalance, 6),
       },
       thresholds: {
         storeWithdrawal: formatUnits(STORE_WITHDRAWAL_THRESHOLD, 6),
-        animalCareRefill: formatUnits(ANIMAL_CARE_REFILL_THRESHOLD, 6),
+        bandRefill: formatUnits(BAND_REFILL_THRESHOLD, 6),
       },
       transactions: transactions,
+      network: NETWORK,
     });
 
   } catch (error: any) {
@@ -247,6 +252,7 @@ export async function GET(request: NextRequest) {
       metadata: {
         error: error.message,
         stack: error.stack,
+        network: NETWORK,
       },
     });
 
