@@ -112,12 +112,12 @@ export async function GET(request: NextRequest) {
       console.log(`[CRON] Withdrawing ${formatUnits(withdrawAmount, 6)} USDC from Store to nano wallet`);
 
       try {
-        // Call claimOwnerCommissionMarketing to withdraw to nano wallet
+        // Call withdrawFunds to send to nano wallet
         const withdrawTx = await adminWalletClient.writeContract({
           address: CONTRACTS.storeContract,
           abi: storeAbi,
-          functionName: 'claimOwnerCommissionMarketing',
-          args: [nanoWallet.address],
+          functionName: 'withdrawFunds',
+          args: [nanoWallet.address, withdrawAmount],
           chain: currentChain,
           paymaster: CONTRACTS.paymasterAddress,
           paymasterInput: paymasterInput,
