@@ -67,14 +67,14 @@ export async function POST(request: NextRequest) {
       console.log('IP Detection:', { ip });
     }
 
-    // Simple rate limiting - 10 requests per second per IP
+    // Simple rate limiting - 100 requests per second per IP for stress testing
     const rateLimitKey = `rate:${ip}:${Math.floor(Date.now() / 1000)}`;
     const requests = await kv.incr(rateLimitKey);
     await kv.expire(rateLimitKey, 2); // Expire after 2 seconds
-    
-    if (requests > 10) {
+
+    if (requests > 100) {
       return NextResponse.json(
-        { 
+        {
           error: "Rate limit exceeded. Please try again in a moment.",
           retryAfter: 1
         },
@@ -99,8 +99,9 @@ export async function POST(request: NextRequest) {
     // Track wallet generation
     await trackWalletGenerated(request, recipient.address, index);
 
-    // Randomly select a distributor from indices 100-199
-    const distributorIndex = 100 + Math.floor(Math.random() * 100);
+    // Select distributor based on user index to avoid nonce conflicts
+    // Distribute evenly across all 100 distributors (indices 100-199)
+    const distributorIndex = 100 + (rawIndex % 100);
     const distributor = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/${distributorIndex}`,
     });

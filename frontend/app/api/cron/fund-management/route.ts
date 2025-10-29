@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     const storeBalance = await publicClient.readContract({
       address: CONTRACTS.storeContract,
       abi: storeAbi,
-      functionName: 'getUSDCBalance',
+      functionName: 'getContractBalance',
     }) as bigint;
 
     // Check band balance
