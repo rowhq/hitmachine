@@ -18,7 +18,9 @@ import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment
 
 const PROD_WALLET = process.env.PROD_WALLET!;
 const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC
+const CRITICAL_THRESHOLD = BigInt(5000 * 1e6); // 5,000 USDC - critically low
 const CLAWBACK_AGE_MS = 60 * 60 * 1000; // 1 hour
+const CRITICAL_AGE_MS = 10 * 60 * 1000; // 10 minutes when critically low
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
@@ -99,18 +101,25 @@ export async function GET(request: NextRequest) {
 
     console.log(`[CRON] Balance below threshold, initiating clawback`);
 
+    // Use shorter age requirement if critically low on funds
+    const isCritical = totalBalance < CRITICAL_THRESHOLD;
+    const ageThreshold = isCritical ? CRITICAL_AGE_MS : CLAWBACK_AGE_MS;
+    const ageDescription = isCritical ? '10 minutes (CRITICAL)' : '1 hour';
+
+    console.log(`[CRON] Using ${ageDescription} age threshold (total: ${formatUnits(totalBalance, 6)} USDC)`);
+
     // Get all recent wallets from KV (network-specific)
     const recentWallets = await kv.lrange(`recent_wallets_${NETWORK}`, 0, -1);
-    const oneHourAgo = Date.now() - CLAWBACK_AGE_MS;
+    const cutoffTime = Date.now() - ageThreshold;
     const walletsToCheck: any[] = [];
-    
+
     // Parse and filter wallets
     for (const wallet of recentWallets) {
       try {
         const parsed = typeof wallet === 'string' ? JSON.parse(wallet) : wallet;
         const walletTime = new Date(parsed.timestamp).getTime();
-        
-        if (walletTime < oneHourAgo) {
+
+        if (walletTime < cutoffTime) {
           walletsToCheck.push(parsed);
         }
       } catch (e) {
@@ -118,7 +127,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`[CRON] Found ${walletsToCheck.length} wallets funded over 1 hour ago`);
+    console.log(`[CRON] Found ${walletsToCheck.length} wallets older than ${ageDescription}`);
 
     // Check which wallets have already made purchases
     const purchasedWallets = new Set<string>();
