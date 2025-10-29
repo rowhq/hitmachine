@@ -17,10 +17,9 @@ import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
 const PROD_WALLET = process.env.PROD_WALLET!;
-const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC
-const CRITICAL_THRESHOLD = BigInt(5000 * 1e6); // 5,000 USDC - critically low
-const CLAWBACK_AGE_MS = 60 * 60 * 1000; // 1 hour
-const CRITICAL_AGE_MS = 10 * 60 * 1000; // 10 minutes when critically low
+const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC - trigger clawback
+const TARGET_THRESHOLD = BigInt(5000 * 1e6); // 5,000 USDC - target to reach above
+const MIN_WALLET_AGE_MS = 5 * 60 * 1000; // Minimum 5 minutes before clawback (safety buffer)
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
@@ -100,34 +99,35 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[CRON] Balance below threshold, initiating clawback`);
-
-    // Use shorter age requirement if critically low on funds
-    const isCritical = totalBalance < CRITICAL_THRESHOLD;
-    const ageThreshold = isCritical ? CRITICAL_AGE_MS : CLAWBACK_AGE_MS;
-    const ageDescription = isCritical ? '10 minutes (CRITICAL)' : '1 hour';
-
-    console.log(`[CRON] Using ${ageDescription} age threshold (total: ${formatUnits(totalBalance, 6)} USDC)`);
+    console.log(`[CRON] Will clawback from oldest wallets until reaching ${formatUnits(TARGET_THRESHOLD, 6)} USDC`);
 
     // Get all recent wallets from KV (network-specific)
     const recentWallets = await kv.lrange(`recent_wallets_${NETWORK}`, 0, -1);
-    const cutoffTime = Date.now() - ageThreshold;
-    const walletsToCheck: any[] = [];
+    const minAge = Date.now() - MIN_WALLET_AGE_MS;
+    const eligibleWallets: any[] = [];
 
-    // Parse and filter wallets
+    // Parse wallets and filter by minimum age (5 minutes safety buffer)
     for (const wallet of recentWallets) {
       try {
         const parsed = typeof wallet === 'string' ? JSON.parse(wallet) : wallet;
         const walletTime = new Date(parsed.timestamp).getTime();
 
-        if (walletTime < cutoffTime) {
-          walletsToCheck.push(parsed);
+        // Only include wallets older than 5 minutes (safety buffer)
+        if (walletTime < minAge) {
+          eligibleWallets.push({
+            ...parsed,
+            timestamp_ms: walletTime,
+          });
         }
       } catch (e) {
         console.error('[CRON] Error parsing wallet:', e);
       }
     }
 
-    console.log(`[CRON] Found ${walletsToCheck.length} wallets older than ${ageDescription}`);
+    // Sort by timestamp (oldest first)
+    eligibleWallets.sort((a, b) => a.timestamp_ms - b.timestamp_ms);
+
+    console.log(`[CRON] Found ${eligibleWallets.length} eligible wallets (older than 5 min)`);
 
     // Check which wallets have already made purchases
     const purchasedWallets = new Set<string>();
@@ -147,11 +147,17 @@ export async function GET(request: NextRequest) {
       console.error('[CRON] Error fetching purchases:', e);
     }
 
-    // Process clawbacks
+    // Process clawbacks from oldest first until we reach target
     const clawbacks = [];
     let totalReclaimed = BigInt(0);
-    
-    for (const walletData of walletsToCheck) {
+    let currentBalance = totalBalance;
+
+    for (const walletData of eligibleWallets) {
+      // Stop if we've reached the target threshold
+      if (currentBalance >= TARGET_THRESHOLD) {
+        console.log(`[CRON] Reached target threshold of ${formatUnits(TARGET_THRESHOLD, 6)} USDC, stopping clawback`);
+        break;
+      }
       try {
         const walletAddress = walletData.address.toLowerCase();
         
@@ -237,6 +243,7 @@ export async function GET(request: NextRequest) {
         });
 
         totalReclaimed += balance;
+        currentBalance += balance; // Update running balance
 
         // Log to Supabase
         await supabase.from('wallet_events').insert({
@@ -261,11 +268,14 @@ export async function GET(request: NextRequest) {
     await supabase.from('wallet_events').insert({
       event_type: 'clawback_summary',
       metadata: {
-        total_wallets_checked: walletsToCheck.length,
+        total_eligible_wallets: eligibleWallets.length,
         total_clawbacks: clawbacks.length,
         total_amount_reclaimed: totalReclaimed.toString(),
         balance_before: totalBalance.toString(),
-        threshold: CLAWBACK_THRESHOLD.toString(),
+        balance_after: currentBalance.toString(),
+        clawback_trigger_threshold: CLAWBACK_THRESHOLD.toString(),
+        target_threshold: TARGET_THRESHOLD.toString(),
+        reached_target: currentBalance >= TARGET_THRESHOLD,
         balances: {
           store: storeBalance.toString(),
           band: bandBalance.toString(),
