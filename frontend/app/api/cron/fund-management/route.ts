@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
+import { mnemonicToAccount } from "viem/accounts";
 import {
   createWalletClient,
   createPublicClient,
@@ -50,11 +50,12 @@ export async function GET(request: NextRequest) {
     });
 
     // Derive nano wallet (index 0) from prod wallet mnemonic
+    // Note: Index 0 is also the deployer and has WITHDRAWER_ROLE on Store contract
     const nanoWallet = mnemonicToAccount(PROD_WALLET, {
       path: `m/44'/60'/0'/0/0`,
     });
-    
-    console.log(`[CRON] Nano wallet address: ${nanoWallet.address}`);
+
+    console.log(`[CRON] Nano/Admin wallet address (index 0): ${nanoWallet.address}`);
 
     // Check store balance
     const storeBalance = await publicClient.readContract({
@@ -83,21 +84,11 @@ export async function GET(request: NextRequest) {
     console.log(`[CRON] Nano wallet balance: ${formatUnits(nanoWalletBalance, 6)} USDC`);
 
     const transactions = [];
-    
-    // Initialize wallet clients
+
+    // Initialize nano wallet client
+    // Note: This is also the admin/deployer wallet (index 0) with WITHDRAWER_ROLE
     const nanoWalletClient = createWalletClient({
       account: nanoWallet,
-      chain: currentChain,
-      transport: http(CURRENT_NETWORK.rpcUrl),
-    }).extend(eip712WalletActions());
-
-    // Use admin wallet for contract withdrawals
-    const adminWallet = privateKeyToAccount(
-      `0x${process.env.WALLET_PRIVATE_KEY!}`
-    );
-    
-    const adminWalletClient = createWalletClient({
-      account: adminWallet,
       chain: currentChain,
       transport: http(CURRENT_NETWORK.rpcUrl),
     }).extend(eip712WalletActions());
@@ -112,8 +103,8 @@ export async function GET(request: NextRequest) {
       console.log(`[CRON] Withdrawing ${formatUnits(withdrawAmount, 6)} USDC from Store to nano wallet`);
 
       try {
-        // Call withdrawFunds to send to nano wallet
-        const withdrawTx = await adminWalletClient.writeContract({
+        // Call withdrawFunds using nano wallet (which has WITHDRAWER_ROLE as deployer)
+        const withdrawTx = await nanoWalletClient.writeContract({
           address: CONTRACTS.storeContract,
           abi: storeAbi,
           functionName: 'withdrawFunds',
