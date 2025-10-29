@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
                 .from('wallet_events')
                 .select('ip_address, event_type, metadata, created_at')
                 .order('created_at', { ascending: false })
-                .limit(500);
+                .limit(10000);
 
             if (!error && eventData) {
                 const uniqueIpSet = new Set(eventData.map(d => d.ip_address));
