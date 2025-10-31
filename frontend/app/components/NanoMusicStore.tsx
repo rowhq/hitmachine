@@ -10,6 +10,8 @@ export default function StoreContract() {
   const { address } = useAccount();
   const [withdrawAddress, setWithdrawAddress] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [marketingPayAddress, setMarketingPayAddress] = useState('');
+  const [marketingPayAmount, setMarketingPayAmount] = useState('');
 
   const { data: hash, writeContract, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
@@ -40,22 +42,34 @@ export default function StoreContract() {
   });
 
   const handleWithdrawAll = () => {
-    if (!withdrawAddress) return;
+    const recipient = withdrawAddress || address;
+    if (!recipient) return;
     writeContract({
       address: config.STORE_CONTRACT,
       abi: storeAbi,
       functionName: 'withdrawAll',
-      args: [withdrawAddress as `0x${string}`],
+      args: [recipient as `0x${string}`],
     });
   };
 
   const handleWithdrawFunds = () => {
-    if (!withdrawAddress || !withdrawAmount) return;
+    const recipient = withdrawAddress || address;
+    if (!recipient || !withdrawAmount) return;
     writeContract({
       address: config.STORE_CONTRACT,
       abi: storeAbi,
       functionName: 'withdrawFunds',
-      args: [withdrawAddress as `0x${string}`, parseUnits(withdrawAmount, 6)],
+      args: [recipient as `0x${string}`, parseUnits(withdrawAmount, 6)],
+    });
+  };
+
+  const handlePayMarketing = () => {
+    if (!marketingPayAddress || !marketingPayAmount) return;
+    writeContract({
+      address: config.STORE_CONTRACT,
+      abi: storeAbi,
+      functionName: 'payMarketing',
+      args: [marketingPayAddress as `0x${string}`, parseUnits(marketingPayAmount, 6)],
     });
   };
 
@@ -103,12 +117,41 @@ export default function StoreContract() {
             </p>
           </div>
         </div>
-        {/* Withdraw Section */}
+        {/* Pay Marketing Section */}
         <div className="border-t pt-4">
-          <h3 className="font-medium mb-2">Withdraw Funds</h3>
+          <h3 className="font-medium mb-2">💰 Pay Marketing (from marketing budget)</h3>
           <input
             type="text"
             placeholder="Recipient address"
+            value={marketingPayAddress}
+            onChange={(e) => setMarketingPayAddress(e.target.value)}
+            className="w-full p-2 border rounded mb-2"
+          />
+          <input
+            type="text"
+            placeholder="Amount (USDC)"
+            value={marketingPayAmount}
+            onChange={(e) => setMarketingPayAmount(e.target.value)}
+            className="w-full p-2 border rounded mb-2"
+          />
+          <button
+            onClick={handlePayMarketing}
+            disabled={isPending || isConfirming || !marketingPayAddress || !marketingPayAmount}
+            className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            Pay Marketing
+          </button>
+          <p className="text-xs text-gray-500 mt-2">
+            Requires MARKETING_ROLE. Pays from the marketing commission budget.
+          </p>
+        </div>
+
+        {/* Withdraw Section */}
+        <div className="border-t pt-4">
+          <h3 className="font-medium mb-2">Withdraw Funds (Admin)</h3>
+          <input
+            type="text"
+            placeholder={`Recipient address (leave empty for ${address?.slice(0, 6)}...)`}
             value={withdrawAddress}
             onChange={(e) => setWithdrawAddress(e.target.value)}
             className="w-full p-2 border rounded mb-2"
@@ -123,19 +166,22 @@ export default function StoreContract() {
           <div className="flex gap-2">
             <button
               onClick={handleWithdrawAll}
-              disabled={isPending || isConfirming || !withdrawAddress}
+              disabled={isPending || isConfirming}
               className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 disabled:opacity-50"
             >
               Withdraw All
             </button>
             <button
               onClick={handleWithdrawFunds}
-              disabled={isPending || isConfirming || !withdrawAddress || !withdrawAmount}
+              disabled={isPending || isConfirming || !withdrawAmount}
               className="flex-1 bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 disabled:opacity-50"
             >
               Withdraw Amount
             </button>
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Leave recipient empty to send to your connected wallet.
+          </p>
         </div>
 
         {/* Pause Controls */}
