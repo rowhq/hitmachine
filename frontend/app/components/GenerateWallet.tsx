@@ -115,9 +115,6 @@ export default function GenerateWallet() {
                 </div>
               )}
             </div>
-            <div className="text-xs text-gray-600 mt-2">
-              Funded from Jobs Contract: {result.animalCareContract || result.jobsContract || config.JOBS_CONTRACT}
-            </div>
           </div>
         </div>
       )}
