@@ -17,8 +17,8 @@ import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
 const PROD_WALLET = process.env.PROD_WALLET!;
-const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC - trigger clawback
-const TARGET_THRESHOLD = BigInt(20000 * 1e6); // 20,000 USDC - target to reach (temporarily high to recover all funds)
+const CLAWBACK_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC - trigger clawback
+const TARGET_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC - target to reach
 const MIN_WALLET_AGE_MS = 5 * 60 * 1000; // Minimum 5 minutes before clawback (safety buffer)
 
 // Initialize Supabase

@@ -6,15 +6,15 @@ The fund management cron job runs every minute to manage funds between contracts
 
 ### How it works
 
-1. **Store Withdrawal**: If Store contract has > 3,000 USDC:
+1. **Store Withdrawal**: If Store contract has > 1,000 USDC:
    - Withdraws excess funds to nano wallet (index 0)
    - Leaves 100 USDC in the store for operations
-   - Uses `claimOwnerCommissionMarketing()` function
+   - Uses `payMarketing()` function (called by marketing wallet index 4)
 
-2. **AnimalCare Refill**: If AnimalCare contract has < 10,000 USDC:
-   - Nano wallet sends USDC to refill to 10,000
-   - Only refills if nano wallet has sufficient balance
-   - Direct USDC transfer from nano wallet
+2. **Band Deposit**: If nano wallet has > 3,000 USDC:
+   - Sends ALL nano wallet balance to Band contract
+   - Direct USDC transfer from nano wallet to Band
+   - Ensures liquidity stays in the active contract
 
 ### Configuration
 
@@ -35,11 +35,12 @@ The clawback cron job runs every minute to reclaim USDC from funded wallets when
 
 ### How it works
 
-1. Checks combined USDC balance of Store + AnimalCare + Nano wallet
-2. If total balance < 15,000 USDC:
-   - Finds all wallets funded over 1 hour ago
+1. Checks combined USDC balance of Store + Band + Nano wallet
+2. If total balance < 10,000 USDC:
+   - Finds all user wallets (starting from oldest)
    - Skips wallets that have already made purchases
-   - Calls the `revoke()` function to return USDC to AnimalCare
+   - Calls the `revoke()` function to return USDC to Band
+   - Stops when system reaches 15,000 USDC total
    - Logs all activities to Supabase
 
 ### Manual Triggering
@@ -60,6 +61,8 @@ All clawback events are logged to Supabase with the following event types:
 
 ### Important Notes
 
-- The `revoke()` function must be implemented in the AnimalCare contract first
+- The `revoke()` function must be implemented in the Band contract
 - Only wallets funded by the system can be clawed back
+- Wallets that have made purchases are never clawed back
 - The cron job uses the paymaster for gas fees
+- Minimum 5 minutes between wallet funding and clawback (safety buffer)

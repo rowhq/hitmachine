@@ -17,8 +17,8 @@ import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
 
 const PROD_WALLET = process.env.PROD_WALLET!;
-const STORE_WITHDRAWAL_THRESHOLD = BigInt(3000 * 1e6); // 3,000 USDC
-const BAND_REFILL_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC
+const STORE_WITHDRAWAL_THRESHOLD = BigInt(1000 * 1e6); // 1,000 USDC
+const NANO_DEPOSIT_THRESHOLD = BigInt(3000 * 1e6); // 3,000 USDC - nano deposits to Band when above this
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       innerInput: "0x",
     });
 
-    // Check if store has > 3k USDC (or force mode to move everything)
+    // Check if store has > 1k USDC (or force mode to move everything)
     if (force || storeBalance > STORE_WITHDRAWAL_THRESHOLD) {
       const withdrawAmount = force
         ? storeBalance // Force: take everything
@@ -146,15 +146,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if Band has < 10k USDC (or force mode to send everything)
-    if (force || bandBalance < BAND_REFILL_THRESHOLD) {
-      const refillAmount = force
-        ? nanoWalletBalance // Force: send everything from nano wallet
-        : BAND_REFILL_THRESHOLD - bandBalance; // Normal: refill to 10k
+    // Check if nano wallet has > 3k USDC (or force mode to send everything)
+    if (force || nanoWalletBalance > NANO_DEPOSIT_THRESHOLD) {
+      const depositAmount = nanoWalletBalance; // Send ALL nano balance to Band
 
-      // Check if nano wallet has enough to refill
-      if (nanoWalletBalance >= refillAmount && refillAmount > 0) {
-        console.log(`[CRON] Sending ${formatUnits(refillAmount, 6)} USDC from nano wallet to Band${force ? ' (FORCED)' : ''}`);
+      // Check if nano wallet has any balance
+      if (depositAmount > 0) {
+        console.log(`[CRON] Sending ${formatUnits(depositAmount, 6)} USDC from nano wallet to Band${force ? ' (FORCED - all balance)' : ' (> 3k threshold - all balance)'}`);
 
         try {
           // Transfer USDC from nano wallet to Band
@@ -162,52 +160,38 @@ export async function GET(request: NextRequest) {
             address: CONTRACTS.usdcAddress,
             abi: usdcAbi,
             functionName: 'transfer',
-            args: [CONTRACTS.bandContract, refillAmount],
+            args: [CONTRACTS.bandContract, depositAmount],
             chain: currentChain,
             paymaster: CONTRACTS.paymasterAddress,
             paymasterInput: paymasterInput,
           });
 
           transactions.push({
-            type: 'band_refill',
-            amount: formatUnits(refillAmount, 6),
+            type: 'band_deposit',
+            amount: formatUnits(depositAmount, 6),
             txHash: transferTx,
             from: nanoWallet.address,
             to: CONTRACTS.bandContract,
           });
 
-          console.log(`[CRON] Band refill tx: ${transferTx}`);
+          console.log(`[CRON] Band deposit tx: ${transferTx}`);
 
           // Log to Supabase
           await supabase.from('wallet_events').insert({
-            event_type: 'band_refill',
+            event_type: 'band_deposit',
             metadata: {
-              amount: refillAmount.toString(),
+              amount: depositAmount.toString(),
               tx_hash: transferTx,
               from: nanoWallet.address,
               to: 'band_contract',
-              balance_before: bandBalance.toString(),
-              nano_wallet_balance: nanoWalletBalance.toString(),
+              band_balance_before: bandBalance.toString(),
+              nano_wallet_balance_before: nanoWalletBalance.toString(),
               network: NETWORK,
             },
           });
         } catch (error) {
-          console.error('[CRON] Band refill error:', error);
+          console.error('[CRON] Band deposit error:', error);
         }
-      } else {
-        console.log(`[CRON] Nano wallet has insufficient balance to refill Band`);
-        console.log(`[CRON] Needed: ${formatUnits(refillAmount, 6)} USDC, Available: ${formatUnits(nanoWalletBalance, 6)} USDC`);
-
-        // Log insufficient balance event
-        await supabase.from('wallet_events').insert({
-          event_type: 'band_refill_insufficient',
-          metadata: {
-            needed_amount: refillAmount.toString(),
-            available_amount: nanoWalletBalance.toString(),
-            band_balance: bandBalance.toString(),
-            network: NETWORK,
-          },
-        });
       }
     }
 
@@ -221,7 +205,7 @@ export async function GET(request: NextRequest) {
         transactions: transactions,
         thresholds: {
           store_withdrawal: STORE_WITHDRAWAL_THRESHOLD.toString(),
-          band_refill: BAND_REFILL_THRESHOLD.toString(),
+          nano_deposit: NANO_DEPOSIT_THRESHOLD.toString(),
         },
         network: NETWORK,
       },
@@ -236,7 +220,7 @@ export async function GET(request: NextRequest) {
       },
       thresholds: {
         storeWithdrawal: formatUnits(STORE_WITHDRAWAL_THRESHOLD, 6),
-        bandRefill: formatUnits(BAND_REFILL_THRESHOLD, 6),
+        nanoDeposit: formatUnits(NANO_DEPOSIT_THRESHOLD, 6),
       },
       transactions: transactions,
       network: NETWORK,
