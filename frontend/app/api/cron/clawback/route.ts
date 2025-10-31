@@ -18,7 +18,7 @@ import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment
 
 const PROD_WALLET = process.env.PROD_WALLET!;
 const CLAWBACK_THRESHOLD = BigInt(15000 * 1e6); // 15,000 USDC - trigger clawback
-const TARGET_THRESHOLD = BigInt(5000 * 1e6); // 5,000 USDC - target to reach above
+const TARGET_THRESHOLD = BigInt(20000 * 1e6); // 20,000 USDC - target to reach (temporarily high to recover all funds)
 const MIN_WALLET_AGE_MS = 5 * 60 * 1000; // Minimum 5 minutes before clawback (safety buffer)
 
 // Initialize Supabase
@@ -26,10 +26,20 @@ const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, "") || "";
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Verify cron secret
+// Verify cron secret - Vercel cron sends Authorization: Bearer <CRON_SECRET>
 function verifyCronSecret(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+
+  // If CRON_SECRET is not set, allow in development but deny in production
+  if (!cronSecret) {
+    console.warn('[CRON] CRON_SECRET not set');
+    return process.env.NODE_ENV === 'development';
+  }
+
+  // Check for Bearer token
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    console.error('[CRON] Invalid authorization header');
     return false;
   }
   return true;
@@ -101,33 +111,26 @@ export async function GET(request: NextRequest) {
     console.log(`[CRON] Balance below threshold, initiating clawback`);
     console.log(`[CRON] Will clawback from oldest wallets until reaching ${formatUnits(TARGET_THRESHOLD, 6)} USDC`);
 
-    // Get all recent wallets from KV (network-specific)
-    const recentWallets = await kv.lrange(`recent_wallets_${NETWORK}`, 0, -1);
-    const minAge = Date.now() - MIN_WALLET_AGE_MS;
+    // Get current wallet index to know how many user wallets exist
+    const indexKey = `wallet_index_${NETWORK}`;
+    const currentIndex = await kv.get(indexKey) as number;
+    const maxUserIndex = currentIndex ? 200 + Number(currentIndex) : 200;
+
+    console.log(`[CRON] Checking user wallets from index 200 to ${maxUserIndex}`);
+
     const eligibleWallets: any[] = [];
 
-    // Parse wallets and filter by minimum age (5 minutes safety buffer)
-    for (const wallet of recentWallets) {
-      try {
-        const parsed = typeof wallet === 'string' ? JSON.parse(wallet) : wallet;
-        const walletTime = new Date(parsed.timestamp).getTime();
-
-        // Only include wallets older than 5 minutes (safety buffer)
-        if (walletTime < minAge) {
-          eligibleWallets.push({
-            ...parsed,
-            timestamp_ms: walletTime,
-          });
-        }
-      } catch (e) {
-        console.error('[CRON] Error parsing wallet:', e);
-      }
+    // Check ALL user wallets (indices 200+) by iterating through them
+    // This is more aggressive than relying on recent_wallets list
+    for (let i = 200; i < maxUserIndex; i++) {
+      eligibleWallets.push({
+        address: null, // Will derive from index
+        index: i,
+        timestamp_ms: 0, // Will clawback oldest indices first
+      });
     }
 
-    // Sort by timestamp (oldest first)
-    eligibleWallets.sort((a, b) => a.timestamp_ms - b.timestamp_ms);
-
-    console.log(`[CRON] Found ${eligibleWallets.length} eligible wallets (older than 5 min)`);
+    console.log(`[CRON] Found ${eligibleWallets.length} potential user wallets to check`);
 
     // Check which wallets have already made purchases
     const purchasedWallets = new Set<string>();
@@ -159,7 +162,11 @@ export async function GET(request: NextRequest) {
         break;
       }
       try {
-        const walletAddress = walletData.address.toLowerCase();
+        // Derive wallet address from index
+        const account = mnemonicToAccount(PROD_WALLET, {
+          path: `m/44'/60'/0'/0/${walletData.index}`,
+        });
+        const walletAddress = account.address.toLowerCase();
         
         // Skip if already purchased
         if (purchasedWallets.has(walletAddress)) {
@@ -181,11 +188,6 @@ export async function GET(request: NextRequest) {
         }
 
         console.log(`[CRON] Clawing back ${formatUnits(balance, 6)} USDC from ${walletAddress}`);
-
-        // Derive wallet from mnemonic
-        const account = mnemonicToAccount(PROD_WALLET, {
-          path: `m/44'/60'/0'/0/${walletData.index}`,
-        });
 
         const walletClient = createWalletClient({
           account,

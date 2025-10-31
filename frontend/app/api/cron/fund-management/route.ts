@@ -25,10 +25,20 @@ const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, "") || "";
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Verify cron secret
+// Verify cron secret - Vercel cron sends Authorization: Bearer <CRON_SECRET>
 function verifyCronSecret(request: NextRequest): boolean {
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const cronSecret = process.env.CRON_SECRET;
+
+  // If CRON_SECRET is not set, allow in development but deny in production
+  if (!cronSecret) {
+    console.warn('[CRON] CRON_SECRET not set');
+    return process.env.NODE_ENV === 'development';
+  }
+
+  // Check for Bearer token
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    console.error('[CRON] Invalid authorization header');
     return false;
   }
   return true;
