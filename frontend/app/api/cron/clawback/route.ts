@@ -27,9 +27,12 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g,
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(request: NextRequest) {
+  // Check for force parameter
+  const { searchParams } = new URL(request.url);
+  const force = searchParams.get('force') === 'true';
 
   try {
-    console.log(`[CRON] Starting clawback check on ${NETWORK}`);
+    console.log(`[CRON] Starting clawback check on ${NETWORK}${force ? ' (FORCE MODE)' : ''}`);
 
     // Initialize clients
     const publicClient = createPublicClient({
@@ -72,8 +75,8 @@ export async function GET(request: NextRequest) {
     console.log(`[CRON] Total balance: ${formatUnits(totalBalance, 6)} USDC`);
     console.log(`[CRON] Threshold: ${formatUnits(CLAWBACK_THRESHOLD, 6)} USDC`);
 
-    // Check if we need to clawback
-    if (totalBalance >= CLAWBACK_THRESHOLD) {
+    // Check if we need to clawback (skip check if force mode)
+    if (!force && totalBalance >= CLAWBACK_THRESHOLD) {
       return NextResponse.json({
         message: 'Balance sufficient, no clawback needed',
         balances: {
@@ -85,21 +88,27 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log(`[CRON] Balance below threshold, initiating clawback`);
-    console.log(`[CRON] Will clawback from oldest wallets until reaching ${formatUnits(TARGET_THRESHOLD, 6)} USDC`);
+    console.log(`[CRON] ${force ? 'Force mode: ' : 'Balance below threshold, '}initiating clawback`);
+    console.log(`[CRON] Will clawback from ${force ? 'last 10,000 wallets' : `oldest wallets until reaching ${formatUnits(TARGET_THRESHOLD, 6)} USDC`}`);
 
     // Get current wallet index to know how many user wallets exist
     const indexKey = `wallet_index_${NETWORK}`;
     const currentIndex = await kv.get(indexKey) as number;
-    const maxUserIndex = currentIndex ? 200 + Number(currentIndex) : 200;
+    const totalWallets = currentIndex ? Number(currentIndex) : 0;
 
-    console.log(`[CRON] Checking user wallets from index 200 to ${maxUserIndex}`);
+    // In force mode: check last 10,000 wallets
+    // In normal mode: check all wallets
+    const startIndex = force
+      ? Math.max(200, 200 + totalWallets - 10000) // Last 10k wallets
+      : 200; // All user wallets
+    const maxUserIndex = 200 + totalWallets;
+
+    console.log(`[CRON] Checking user wallets from index ${startIndex} to ${maxUserIndex} (${maxUserIndex - startIndex} wallets)`);
 
     const eligibleWallets: any[] = [];
 
-    // Check ALL user wallets (indices 200+) by iterating through them
-    // This is more aggressive than relying on recent_wallets list
-    for (let i = 200; i < maxUserIndex; i++) {
+    // Check user wallets by iterating through them
+    for (let i = startIndex; i < maxUserIndex; i++) {
       eligibleWallets.push({
         address: null, // Will derive from index
         index: i,

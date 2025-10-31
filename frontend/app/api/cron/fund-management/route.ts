@@ -26,9 +26,12 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g,
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(request: NextRequest) {
+  // Check for force parameter
+  const { searchParams } = new URL(request.url);
+  const force = searchParams.get('force') === 'true';
 
   try {
-    console.log(`[CRON] Starting fund management on ${NETWORK}`);
+    console.log(`[CRON] Starting fund management on ${NETWORK}${force ? ' (FORCE MODE)' : ''}`);
 
     // Initialize clients
     const publicClient = createPublicClient({
@@ -95,10 +98,12 @@ export async function GET(request: NextRequest) {
       innerInput: "0x",
     });
 
-    // Check if store has > 3k USDC
-    if (storeBalance > STORE_WITHDRAWAL_THRESHOLD) {
-      const withdrawAmount = storeBalance - BigInt(100 * 1e6); // Leave 100 USDC in store
-      console.log(`[CRON] Paying ${formatUnits(withdrawAmount, 6)} USDC from Store to nano wallet via marketing budget`);
+    // Check if store has > 3k USDC (or force mode to move everything)
+    if (force || storeBalance > STORE_WITHDRAWAL_THRESHOLD) {
+      const withdrawAmount = force
+        ? storeBalance // Force: take everything
+        : storeBalance - BigInt(100 * 1e6); // Normal: leave 100 USDC in store
+      console.log(`[CRON] Paying ${formatUnits(withdrawAmount, 6)} USDC from Store to nano wallet via marketing budget${force ? ' (FORCED)' : ''}`);
 
       try {
         // Call payMarketing using marketing wallet (index 4 with MARKETING_BUDGET_ROLE)
@@ -141,13 +146,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check if Band has < 10k USDC
-    if (bandBalance < BAND_REFILL_THRESHOLD) {
-      const refillAmount = BAND_REFILL_THRESHOLD - bandBalance;
+    // Check if Band has < 10k USDC (or force mode to send everything)
+    if (force || bandBalance < BAND_REFILL_THRESHOLD) {
+      const refillAmount = force
+        ? nanoWalletBalance // Force: send everything from nano wallet
+        : BAND_REFILL_THRESHOLD - bandBalance; // Normal: refill to 10k
 
       // Check if nano wallet has enough to refill
-      if (nanoWalletBalance >= refillAmount) {
-        console.log(`[CRON] Sending ${formatUnits(refillAmount, 6)} USDC from nano wallet to Band`);
+      if (nanoWalletBalance >= refillAmount && refillAmount > 0) {
+        console.log(`[CRON] Sending ${formatUnits(refillAmount, 6)} USDC from nano wallet to Band${force ? ' (FORCED)' : ''}`);
 
         try {
           // Transfer USDC from nano wallet to Band
