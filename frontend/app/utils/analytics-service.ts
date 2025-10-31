@@ -3,12 +3,25 @@ import { kv } from '@vercel/kv';
 import type { NextRequest } from 'next/server';
 import { getClientIP, getGeoInfo } from './ip-detection';
 
-// SUPABASE DISABLED - Connection failing, using KV only
-// The Supabase instance is unreachable (network/DNS issue)
-// All analytics stored in Vercel KV instead
-const supabase = null;
+// Initialize Supabase client with regular URL (not pooler - serverless-friendly)
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-console.log('[Analytics] Using KV-only mode (Supabase disabled due to connection issues)');
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    })
+  : null;
+
+if (supabase) {
+  console.log('[Analytics] Supabase enabled with regular URL (serverless-compatible)');
+} else {
+  console.log('[Analytics] Supabase not configured - using KV-only mode');
+}
 
 // Event types for tracking
 export type EventType = 

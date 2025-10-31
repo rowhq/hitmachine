@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
         country: geoInfo.country,
         city: geoInfo.city,
         region: geoInfo.region,
-      }, 100)
+      }, 10000) // Store last 10,000 wallets for clawback
     ]);
 
     return NextResponse.json(

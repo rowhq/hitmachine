@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
   const ip = getClientIP(request);
   console.log(`Purchase attempt from IP: ${ip}`);
   
-  // Rate limiting - 5 purchase attempts per minute per IP
+  // Rate limiting - 10000 purchase attempts per minute per IP (temporarily high for testing)
   const rateLimitKey = `purchase:${ip}:${Math.floor(Date.now() / 60000)}`;
   const requests = await kv.incr(rateLimitKey);
   await kv.expire(rateLimitKey, 120); // Expire after 2 minutes
-  
-  if (requests > 5) {
+
+  if (requests > 10000) {
     return NextResponse.json(
-      { 
+      {
         error: "Rate limit exceeded. Please try again later.",
         retryAfter: 60
       },
