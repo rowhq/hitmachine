@@ -7,8 +7,14 @@ import { getClientIP, getGeoInfo } from './ip-detection';
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, '') || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\n/g, '') || '';
 
-const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
+// Use pooler URL for Vercel serverless (better for IPv6 and connection pooling)
+// If SUPABASE_URL contains .supabase.co, replace with .pooler.supabase.com
+const poolerUrl = supabaseUrl.includes('.supabase.co')
+  ? supabaseUrl.replace('.supabase.co', '.pooler.supabase.com')
+  : supabaseUrl;
+
+const supabase = poolerUrl && supabaseServiceKey
+  ? createClient(poolerUrl, supabaseServiceKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -16,6 +22,12 @@ const supabase = supabaseUrl && supabaseServiceKey
       }
     })
   : null;
+
+if (supabase) {
+  console.log(`[Analytics] Supabase initialized with URL: ${poolerUrl}`);
+} else {
+  console.warn('[Analytics] Supabase not initialized - missing credentials. Using KV fallback only.');
+}
 
 // Event types for tracking
 export type EventType = 
