@@ -6,11 +6,15 @@ export const NETWORK = (process.env.NEXT_PUBLIC_NETWORK || "testnet") as
 export const IS_MAINNET = NETWORK === "mainnet";
 export const IS_TESTNET = NETWORK === "testnet";
 
-// Gift card configuration for wallet funding
-// Frontend should read actual price from contract
-export const GIFT_CARD_PRICE = BigInt(31.96e6); // 31.96 USDC on mainnet (with 6 decimals)
+// Gift card price configuration
+// NOTE: These are DEPRECATED - use getGiftCardPrice() from utils/price-service.ts instead
+// The price is now read dynamically from the NanoMusicStore contract
+// These are kept only for backwards compatibility and will be removed in future versions
+/** @deprecated Use getGiftCardPrice() from utils/price-service.ts instead */
+export const GIFT_CARD_PRICE = BigInt(7.99e6); // Fallback only - actual price read from contract
 
-export const GIFT_CARD_PRICE_DISPLAY = "31.96"; // For display on mainnet
+/** @deprecated Use getGiftCardPriceDisplay() from utils/price-service.ts instead */
+export const GIFT_CARD_PRICE_DISPLAY = "7.99"; // Fallback only - actual price read from contract
 
 // Network configurations
 export const NETWORKS = {

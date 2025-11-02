@@ -7,7 +7,8 @@ import { kv } from "@vercel/kv";
 import storeAbi from "../../abi/nanoMusicStore.json";
 import usdcAbi from "../../abi/mockUsdc.json";
 import { corsHeaders } from "../cors";
-import { CONTRACTS, GIFT_CARD_PRICE, CURRENT_NETWORK, NETWORK } from "../../config/environment";
+import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../config/environment";
+import { getGiftCardPrice } from "../../utils/price-service";
 import { getClientIP } from "../../utils/ip-detection";
 import {
   trackPurchaseAttempt,
@@ -158,8 +159,8 @@ export async function POST(request: NextRequest) {
       transport: http(config.rpcUrl),
     }).extend(eip712WalletActions());
 
-    // Use gift card price from config
-    const giftcardPrice = GIFT_CARD_PRICE;
+    // Fetch the current gift card price from the contract
+    const giftcardPrice = await getGiftCardPrice();
 
     // Get the nonce for the wallet
     const nonce = await publicClient.getTransactionCount({

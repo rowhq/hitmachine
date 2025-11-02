@@ -14,7 +14,8 @@ import usdcAbi from "../../abi/mockUsdc.json";
 import storeAbi from "../../abi/nanoMusicStore.json";
 import bandAbi from "../../abi/nanoBand.json";
 import { corsHeaders } from "../cors";
-import { CONTRACTS, GIFT_CARD_PRICE, GIFT_CARD_PRICE_DISPLAY, CURRENT_NETWORK, NETWORK } from "../../config/environment";
+import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../config/environment";
+import { getGiftCardPrice, formatGiftCardPrice } from "../../utils/price-service";
 import {
   trackGenerateAttempt,
   trackWalletGenerated,
@@ -51,6 +52,10 @@ export async function POST(request: NextRequest) {
     }
     // Get network configuration
     const config = getNetworkConfig();
+
+    // Fetch the current gift card price from the contract
+    const giftCardPrice = await getGiftCardPrice();
+    const giftCardPriceDisplay = formatGiftCardPrice(giftCardPrice);
 
     // Log only essential info in production
     if (process.env.NODE_ENV === 'development') {
@@ -141,7 +146,7 @@ export async function POST(request: NextRequest) {
         address: config.bandContract,
         abi: bandAbi,
         functionName: "paySongSubmitter",
-        args: [recipient.address, GIFT_CARD_PRICE, BigInt(0)],
+        args: [recipient.address, giftCardPrice, BigInt(0)],
         chain: config.chain,
         paymaster: config.paymasterAddress,
         paymasterInput: paymasterInput,
@@ -188,7 +193,7 @@ export async function POST(request: NextRequest) {
         payTx: payTx.toString(),
         approveTx: approveTx.toString(),
         fundedWith: {
-          usdc: `${GIFT_CARD_PRICE_DISPLAY} USDC (from Band contract - for gift card purchase)`,
+          usdc: `${giftCardPriceDisplay} USDC (from Band contract - for gift card purchase)`,
           soph: "0 SOPH (not needed - paymaster covers all gas)",
         },
         storeContract: config.storeContract,
