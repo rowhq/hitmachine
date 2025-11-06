@@ -49,52 +49,74 @@ export async function GET(request: NextRequest) {
 
     console.log(`Total files fetched: ${allFiles.length}`);
 
-    // Filter to only upload files
+    // Filter to only upload files BEFORE doing any KV lookups
     const uploadFiles = allFiles.filter(b =>
       b.pathname.toLowerCase().includes('upload')
     );
 
     console.log(`Upload files found: ${uploadFiles.length}`);
 
-    // Get status for upload files from KV
-    const uploadFilesWithStatus = await Promise.all(
-      uploadFiles.map(async (blob) => {
-        const filename = blob.pathname;
-        const status = await kv.get<AudioStatus>(`audio:${filename}`);
+    // For filtering, we need to check status for more files than we'll return
+    // so we can filter out watched/voted ones
+    const checkBatchSize = filter === 'unwatched' ? 200 : requestedLimit;
+    const startIndex = offset;
+    const endIndex = Math.min(startIndex + checkBatchSize, uploadFiles.length);
+    const filesToCheck = uploadFiles.slice(startIndex, endIndex);
 
-        return {
-          url: blob.url,
-          filename: blob.pathname,
-          uploadedAt: blob.uploadedAt,
-          size: blob.size,
-          status: status || { watched: false, vote: null, timestamp: 0 },
-        };
+    console.log(`Checking status for files ${startIndex} to ${endIndex} (${filesToCheck.length} files)...`);
+
+    // Get status for files from KV - ONLY for the files we're potentially returning
+    const filesWithStatus = await Promise.all(
+      filesToCheck.map(async (blob) => {
+        try {
+          const filename = blob.pathname;
+          const status = await kv.get<AudioStatus>(`audio:${filename}`);
+
+          return {
+            url: blob.url,
+            filename: blob.pathname,
+            uploadedAt: blob.uploadedAt,
+            size: blob.size,
+            status: status || { watched: false, vote: null, timestamp: 0 },
+          };
+        } catch (error) {
+          console.error(`Error getting status for ${blob.pathname}:`, error);
+          return {
+            url: blob.url,
+            filename: blob.pathname,
+            uploadedAt: blob.uploadedAt,
+            size: blob.size,
+            status: { watched: false, vote: null, timestamp: 0 },
+          };
+        }
       })
     );
 
-    // Apply filters on upload files only
-    let filteredBlobs = uploadFilesWithStatus;
+    console.log(`KV lookups completed for ${filesWithStatus.length} files`);
+
+    // Apply filters
+    let filteredBlobs = filesWithStatus;
     if (filter === 'unwatched') {
-      filteredBlobs = uploadFilesWithStatus.filter(b => !b.status.watched);
+      filteredBlobs = filesWithStatus.filter(b => !b.status.watched);
     } else if (filter === 'upvoted') {
-      filteredBlobs = uploadFilesWithStatus.filter(b => b.status.vote === 'up');
+      filteredBlobs = filesWithStatus.filter(b => b.status.vote === 'up');
     } else if (filter === 'downvoted') {
-      filteredBlobs = uploadFilesWithStatus.filter(b => b.status.vote === 'down');
+      filteredBlobs = filesWithStatus.filter(b => b.status.vote === 'down');
     }
 
     console.log(`Filtered files (${filter}): ${filteredBlobs.length}`);
 
-    // Paginate using offset
-    const paginatedBlobs = filteredBlobs.slice(offset, offset + requestedLimit);
-    const hasMoreResults = offset + requestedLimit < filteredBlobs.length;
+    // Return up to requestedLimit
+    const paginatedBlobs = filteredBlobs.slice(0, requestedLimit);
+    const hasMoreResults = endIndex < uploadFiles.length;
 
     console.log(`Returning ${paginatedBlobs.length} files, hasMore: ${hasMoreResults}`);
 
     return NextResponse.json({
       blobs: paginatedBlobs,
-      offset: offset + paginatedBlobs.length,
+      offset: endIndex, // Next offset is where we stopped checking
       hasMore: hasMoreResults,
-      total: filteredBlobs.length,
+      total: uploadFiles.length,
       totalUploadFiles: uploadFiles.length,
     });
   } catch (error) {
