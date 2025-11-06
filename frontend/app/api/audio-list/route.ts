@@ -8,66 +8,59 @@ interface AudioStatus {
   watched: boolean;
   vote: 'up' | 'down' | null;
   timestamp: number;
+  comment?: string;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const blobCursor = searchParams.get('cursor') || undefined;
     const requestedLimit = parseInt(searchParams.get('limit') || '50');
     const filter = searchParams.get('filter'); // 'unwatched', 'upvoted', 'downvoted', 'all'
 
-    // Fetch ALL files from blob storage (no limit)
-    console.log('Fetching all audio files from blob storage...');
-    let allFiles: any[] = [];
-    let hasMore = true;
-    let blobCursor: string | undefined = undefined;
-    let iterations = 0;
+    console.log(`Fetching from blob storage, cursor: ${blobCursor || 'start'}`);
 
-    // Fetch ALL files in batches of 1000
-    while (hasMore) {
+    // Fetch batches until we have enough upload files to return
+    let uploadFiles: any[] = [];
+    let currentCursor: string | undefined = blobCursor;
+    let hasMoreBlobs = true;
+    let iterations = 0;
+    const maxIterations = 20; // Safety limit
+
+    // Keep fetching until we have enough unwatched upload files OR we run out of blobs
+    while (uploadFiles.length < requestedLimit * 2 && hasMoreBlobs && iterations < maxIterations) {
       iterations++;
-      console.log(`Fetching batch ${iterations}...`);
+      console.log(`Fetching batch ${iterations}, current uploads: ${uploadFiles.length}`);
 
       // @ts-ignore - type issue with destructuring
       const { blobs, cursor: nextCursor, hasMore: moreAvailable } = await list({
         prefix: 'audio/',
-        limit: 1000,
-        cursor: blobCursor,
+        limit: 1000, // Fetch 1000 at a time from blob
+        cursor: currentCursor,
       });
 
-      allFiles = [...allFiles, ...blobs];
-      blobCursor = nextCursor;
-      hasMore = moreAvailable;
+      // Filter for upload files immediately
+      const batchUploadFiles = blobs.filter(b =>
+        b.pathname.toLowerCase().includes('upload')
+      );
 
-      // Safety limit to prevent infinite loops (max 30k files)
-      if (iterations >= 30) {
-        console.log('Hit max iterations limit');
-        break;
-      }
+      console.log(`Batch ${iterations}: ${blobs.length} total, ${batchUploadFiles.length} uploads`);
+
+      uploadFiles = [...uploadFiles, ...batchUploadFiles];
+      currentCursor = nextCursor;
+      hasMoreBlobs = moreAvailable;
     }
 
-    console.log(`Total files fetched: ${allFiles.length}`);
+    console.log(`Found ${uploadFiles.length} upload files after ${iterations} iterations`);
 
-    // Filter to only upload files BEFORE doing any KV lookups
-    const uploadFiles = allFiles.filter(b =>
-      b.pathname.toLowerCase().includes('upload')
+    // Sort by uploadedAt (oldest first) for systematic review
+    uploadFiles.sort((a, b) =>
+      new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime()
     );
 
-    console.log(`Upload files found: ${uploadFiles.length}`);
-
-    // For filtering, we need to check status for more files than we'll return
-    // so we can filter out watched/voted ones
-    const checkBatchSize = filter === 'unwatched' ? 200 : requestedLimit;
-    const startIndex = offset;
-    const endIndex = Math.min(startIndex + checkBatchSize, uploadFiles.length);
-    const filesToCheck = uploadFiles.slice(startIndex, endIndex);
-
-    console.log(`Checking status for files ${startIndex} to ${endIndex} (${filesToCheck.length} files)...`);
-
-    // Get status for files from KV - ONLY for the files we're potentially returning
+    // Get status for files from KV
     const filesWithStatus = await Promise.all(
-      filesToCheck.map(async (blob) => {
+      uploadFiles.map(async (blob) => {
         try {
           const filename = blob.pathname;
           const status = await kv.get<AudioStatus>(`audio:${filename}`);
@@ -108,16 +101,14 @@ export async function GET(request: NextRequest) {
 
     // Return up to requestedLimit
     const paginatedBlobs = filteredBlobs.slice(0, requestedLimit);
-    const hasMoreResults = endIndex < uploadFiles.length;
 
-    console.log(`Returning ${paginatedBlobs.length} files, hasMore: ${hasMoreResults}`);
+    console.log(`Returning ${paginatedBlobs.length} files, nextCursor: ${currentCursor || 'end'}`);
 
     return NextResponse.json({
       blobs: paginatedBlobs,
-      offset: endIndex, // Next offset is where we stopped checking
-      hasMore: hasMoreResults,
-      total: uploadFiles.length,
-      totalUploadFiles: uploadFiles.length,
+      cursor: currentCursor, // Blob cursor for next batch
+      hasMore: hasMoreBlobs || filteredBlobs.length > requestedLimit,
+      total: uploadFiles.length, // Uploads found in this batch
     });
   } catch (error) {
     console.error('Error listing audio files:', error);
