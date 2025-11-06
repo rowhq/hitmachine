@@ -13,77 +13,89 @@ interface AudioStatus {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    let cursor = searchParams.get('cursor') || undefined;
+    const offset = parseInt(searchParams.get('offset') || '0');
     const requestedLimit = parseInt(searchParams.get('limit') || '50');
     const filter = searchParams.get('filter'); // 'unwatched', 'upvoted', 'downvoted', 'all'
 
-    // Keep fetching until we have enough upload files or run out of files
-    let allUploadFiles: any[] = [];
+    // Fetch ALL files from blob storage (no limit)
+    console.log('Fetching all audio files from blob storage...');
+    let allFiles: any[] = [];
     let hasMore = true;
-    let finalCursor = cursor;
-    const maxIterations = 100; // Increased to allow going through all files (100k files = 100 iterations of 1000)
+    let blobCursor: string | undefined = undefined;
     let iterations = 0;
 
-    // Fetch larger batches to get more upload files (1000 at a time)
-    while (allUploadFiles.length < requestedLimit && hasMore && iterations < maxIterations) {
+    // Fetch ALL files in batches of 1000
+    while (hasMore) {
       iterations++;
+      console.log(`Fetching batch ${iterations}...`);
 
+      // @ts-ignore - type issue with destructuring
       const { blobs, cursor: nextCursor, hasMore: moreAvailable } = await list({
         prefix: 'audio/',
-        limit: 1000, // Fetch 1000 at a time
-        cursor: finalCursor,
+        limit: 1000,
+        cursor: blobCursor,
       });
 
-      // Get status for each file from KV
-      const blobsWithStatus = await Promise.all(
-        blobs.map(async (blob) => {
-          const filename = blob.pathname;
-          const status = await kv.get<AudioStatus>(`audio:${filename}`);
-
-          return {
-            url: blob.url,
-            filename: blob.pathname,
-            uploadedAt: blob.uploadedAt,
-            size: blob.size,
-            status: status || { watched: false, vote: null, timestamp: 0 },
-          };
-        })
-      );
-
-      // Filter to only show upload type files (exclude record type)
-      // Files with 'upload' in the name
-      const uploadFiles = blobsWithStatus.filter(b =>
-        b.filename.toLowerCase().includes('upload')
-      );
-
-      allUploadFiles = [...allUploadFiles, ...uploadFiles];
-      finalCursor = nextCursor;
+      allFiles = [...allFiles, ...blobs];
+      blobCursor = nextCursor;
       hasMore = moreAvailable;
 
-      // If we have no more files from the blob storage, break
-      if (!moreAvailable) {
+      // Safety limit to prevent infinite loops (max 30k files)
+      if (iterations >= 30) {
+        console.log('Hit max iterations limit');
         break;
       }
     }
 
+    console.log(`Total files fetched: ${allFiles.length}`);
+
+    // Filter to only upload files
+    const uploadFiles = allFiles.filter(b =>
+      b.pathname.toLowerCase().includes('upload')
+    );
+
+    console.log(`Upload files found: ${uploadFiles.length}`);
+
+    // Get status for upload files from KV
+    const uploadFilesWithStatus = await Promise.all(
+      uploadFiles.map(async (blob) => {
+        const filename = blob.pathname;
+        const status = await kv.get<AudioStatus>(`audio:${filename}`);
+
+        return {
+          url: blob.url,
+          filename: blob.pathname,
+          uploadedAt: blob.uploadedAt,
+          size: blob.size,
+          status: status || { watched: false, vote: null, timestamp: 0 },
+        };
+      })
+    );
+
     // Apply filters on upload files only
-    let filteredBlobs = allUploadFiles;
+    let filteredBlobs = uploadFilesWithStatus;
     if (filter === 'unwatched') {
-      filteredBlobs = allUploadFiles.filter(b => !b.status.watched);
+      filteredBlobs = uploadFilesWithStatus.filter(b => !b.status.watched);
     } else if (filter === 'upvoted') {
-      filteredBlobs = allUploadFiles.filter(b => b.status.vote === 'up');
+      filteredBlobs = uploadFilesWithStatus.filter(b => b.status.vote === 'up');
     } else if (filter === 'downvoted') {
-      filteredBlobs = allUploadFiles.filter(b => b.status.vote === 'down');
+      filteredBlobs = uploadFilesWithStatus.filter(b => b.status.vote === 'down');
     }
 
-    // Limit to requested amount
-    const limitedBlobs = filteredBlobs.slice(0, requestedLimit);
+    console.log(`Filtered files (${filter}): ${filteredBlobs.length}`);
+
+    // Paginate using offset
+    const paginatedBlobs = filteredBlobs.slice(offset, offset + requestedLimit);
+    const hasMoreResults = offset + requestedLimit < filteredBlobs.length;
+
+    console.log(`Returning ${paginatedBlobs.length} files, hasMore: ${hasMoreResults}`);
 
     return NextResponse.json({
-      blobs: limitedBlobs,
-      cursor: finalCursor,
-      hasMore: hasMore && iterations < maxIterations,
-      total: limitedBlobs.length,
+      blobs: paginatedBlobs,
+      offset: offset + paginatedBlobs.length,
+      hasMore: hasMoreResults,
+      total: filteredBlobs.length,
+      totalUploadFiles: uploadFiles.length,
     });
   } catch (error) {
     console.error('Error listing audio files:', error);
