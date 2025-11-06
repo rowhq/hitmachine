@@ -54,6 +54,20 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
     return shuffled;
   };
 
+  // Get audio duration from URL
+  const getAudioDuration = (url: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio();
+      audio.addEventListener('loadedmetadata', () => {
+        resolve(audio.duration);
+      });
+      audio.addEventListener('error', () => {
+        reject(new Error('Failed to load audio metadata'));
+      });
+      audio.src = url;
+    });
+  };
+
   const loadMoreFiles = async () => {
     try {
       setLoading(true);
@@ -68,8 +82,25 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
       const response = await fetch(`/api/audio-list?${params}`);
       const data = await response.json();
 
-      // Shuffle the new files before adding them
-      const shuffledNewFiles = shuffleArray(data.blobs);
+      // Filter files by duration (only keep files > 5 seconds)
+      const filesWithDuration = await Promise.all(
+        data.blobs.map(async (file: AudioFile) => {
+          try {
+            const duration = await getAudioDuration(file.url);
+            return { file, duration };
+          } catch (error) {
+            console.warn(`Failed to get duration for ${file.filename}:`, error);
+            return { file, duration: 0 };
+          }
+        })
+      );
+
+      const filteredFiles = filesWithDuration
+        .filter(({ duration }) => duration > 5)
+        .map(({ file }) => file);
+
+      // Shuffle the filtered files before adding them
+      const shuffledNewFiles = shuffleArray(filteredFiles);
       setAudioFiles(prev => [...prev, ...shuffledNewFiles]);
       setCursor(data.cursor);
       setHasMore(data.hasMore);
