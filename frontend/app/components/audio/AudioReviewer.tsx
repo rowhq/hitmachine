@@ -44,6 +44,16 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
     }
   }, [currentFile]);
 
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const loadMoreFiles = async () => {
     try {
       setLoading(true);
@@ -58,7 +68,9 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
       const response = await fetch(`/api/audio-list?${params}`);
       const data = await response.json();
 
-      setAudioFiles(prev => [...prev, ...data.blobs]);
+      // Shuffle the new files before adding them
+      const shuffledNewFiles = shuffleArray(data.blobs);
+      setAudioFiles(prev => [...prev, ...shuffledNewFiles]);
       setCursor(data.cursor);
       setHasMore(data.hasMore);
     } catch (error) {
