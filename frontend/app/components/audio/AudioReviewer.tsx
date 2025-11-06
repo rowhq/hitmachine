@@ -25,6 +25,7 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [totalUploadFiles, setTotalUploadFiles] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [stats, setStats] = useState({ upvoted: 0, downvoted: 0, total: 0 });
@@ -66,6 +67,11 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
       setAudioFiles(prev => [...prev, ...data.blobs]);
       setOffset(data.offset);
       setHasMore(data.hasMore);
+
+      // Set total upload files count (only on first load)
+      if (totalUploadFiles === null && data.totalUploadFiles) {
+        setTotalUploadFiles(data.totalUploadFiles);
+      }
     } catch (error) {
       console.error('Error loading audio files:', error);
     } finally {
@@ -215,8 +221,13 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
           <span>👎 {stats.downvoted}</span>
         </div>
         <div className="text-gray-400">
-          {currentIndex + 1} / {audioFiles.length}
+          {currentIndex + 1} / {audioFiles.length} loaded
         </div>
+        {totalUploadFiles !== null && (
+          <div className="text-gray-500 text-xs">
+            ({totalUploadFiles} total uploads)
+          </div>
+        )}
       </div>
 
       {/* Main content */}
