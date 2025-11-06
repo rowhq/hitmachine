@@ -11,6 +11,7 @@ interface AudioFile {
     watched: boolean;
     vote: 'up' | 'down' | null;
     timestamp: number;
+    comment?: string;
   };
 }
 
@@ -27,6 +28,7 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [stats, setStats] = useState({ upvoted: 0, downvoted: 0, total: 0 });
+  const [comment, setComment] = useState('');
 
   const currentFile = audioFiles[currentIndex];
 
@@ -35,38 +37,16 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
     loadMoreFiles();
   }, []);
 
-  // Auto-play when current file changes
+  // Auto-play when current file changes and load existing comment
   useEffect(() => {
     if (currentFile && audioRef.current) {
       audioRef.current.src = currentFile.url;
       audioRef.current.play();
       setIsPlaying(true);
+      // Load existing comment if available
+      setComment(currentFile.status?.comment || '');
     }
   }, [currentFile]);
-
-  // Fisher-Yates shuffle algorithm
-  const shuffleArray = <T,>(array: T[]): T[] => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
-  // Get audio duration from URL
-  const getAudioDuration = (url: string): Promise<number> => {
-    return new Promise((resolve, reject) => {
-      const audio = new Audio();
-      audio.addEventListener('loadedmetadata', () => {
-        resolve(audio.duration);
-      });
-      audio.addEventListener('error', () => {
-        reject(new Error('Failed to load audio metadata'));
-      });
-      audio.src = url;
-    });
-  };
 
   const loadMoreFiles = async () => {
     try {
@@ -82,26 +62,8 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
       const response = await fetch(`/api/audio-list?${params}`);
       const data = await response.json();
 
-      // Filter files by duration (only keep files > 5 seconds)
-      const filesWithDuration = await Promise.all(
-        data.blobs.map(async (file: AudioFile) => {
-          try {
-            const duration = await getAudioDuration(file.url);
-            return { file, duration };
-          } catch (error) {
-            console.warn(`Failed to get duration for ${file.filename}:`, error);
-            return { file, duration: 0 };
-          }
-        })
-      );
-
-      const filteredFiles = filesWithDuration
-        .filter(({ duration }) => duration > 5)
-        .map(({ file }) => file);
-
-      // Shuffle the filtered files before adding them
-      const shuffledNewFiles = shuffleArray(filteredFiles);
-      setAudioFiles(prev => [...prev, ...shuffledNewFiles]);
+      // Keep files in order (no randomization)
+      setAudioFiles(prev => [...prev, ...data.blobs]);
       setCursor(data.cursor);
       setHasMore(data.hasMore);
     } catch (error) {
@@ -122,6 +84,7 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
           filename: currentFile.filename,
           vote,
           watched,
+          comment: comment.trim() || undefined,
         }),
       });
 
@@ -139,6 +102,9 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
       } else if (vote === 'down') {
         setStats(prev => ({ ...prev, downvoted: prev.downvoted + 1 }));
       }
+
+      // Clear comment after submitting
+      setComment('');
     } catch (error) {
       console.error('Error updating status:', error);
     }
@@ -154,13 +120,21 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
     moveToNext();
   };
 
-  const moveToNext = () => {
+  const moveToNext = async () => {
+    // Pre-load next batch when getting close to the end
+    if (hasMore && currentIndex >= audioFiles.length - 5 && !loading) {
+      await loadMoreFiles();
+    }
+
     if (currentIndex < audioFiles.length - 1) {
       setCurrentIndex(currentIndex + 1);
-    } else if (hasMore) {
-      loadMoreFiles();
-      setCurrentIndex(currentIndex + 1);
-    } else {
+    } else if (hasMore && !loading) {
+      // If we're at the end and there are more files, load them
+      await loadMoreFiles();
+      if (audioFiles.length > currentIndex + 1) {
+        setCurrentIndex(currentIndex + 1);
+      }
+    } else if (!hasMore) {
       // No more files
       onComplete?.();
     }
@@ -263,11 +237,23 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
 
           <audio
             ref={audioRef}
-            onEnded={moveToNext}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             controls
             className="w-full"
+          />
+        </div>
+
+        {/* Optional comment box */}
+        <div className="bg-gray-800 rounded-2xl p-6 mb-4">
+          <label className="block text-sm text-gray-400 mb-2">
+            Optional Comment (will be shown when revisiting this track)
+          </label>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Add notes about this track..."
+            className="w-full bg-gray-700 text-white rounded-lg p-3 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 

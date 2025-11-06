@@ -7,12 +7,13 @@ interface AudioStatus {
   watched: boolean;
   vote: 'up' | 'down' | null;
   timestamp: number;
+  comment?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { filename, vote, watched } = body;
+    const { filename, vote, watched, comment } = body;
 
     if (!filename) {
       return NextResponse.json(
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
       watched: watched !== undefined ? watched : currentStatus.watched,
       vote: vote !== undefined ? vote : currentStatus.vote,
       timestamp: Date.now(),
+      comment: comment !== undefined ? comment : currentStatus.comment,
     };
 
     // Save to KV

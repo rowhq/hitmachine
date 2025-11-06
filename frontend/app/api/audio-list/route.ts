@@ -40,14 +40,20 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Apply filters
-    let filteredBlobs = blobsWithStatus;
+    // Filter to only show upload type files (exclude record type)
+    // Files with 'upload' in the name or in upload subfolder
+    const uploadFiles = blobsWithStatus.filter(b =>
+      b.filename.includes('/upload/') || b.filename.toLowerCase().includes('upload')
+    );
+
+    // Apply filters on upload files only
+    let filteredBlobs = uploadFiles;
     if (filter === 'unwatched') {
-      filteredBlobs = blobsWithStatus.filter(b => !b.status.watched);
+      filteredBlobs = uploadFiles.filter(b => !b.status.watched);
     } else if (filter === 'upvoted') {
-      filteredBlobs = blobsWithStatus.filter(b => b.status.vote === 'up');
+      filteredBlobs = uploadFiles.filter(b => b.status.vote === 'up');
     } else if (filter === 'downvoted') {
-      filteredBlobs = blobsWithStatus.filter(b => b.status.vote === 'down');
+      filteredBlobs = uploadFiles.filter(b => b.status.vote === 'down');
     }
 
     return NextResponse.json({
