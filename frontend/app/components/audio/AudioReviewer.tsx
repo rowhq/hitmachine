@@ -144,13 +144,26 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
     }
   };
 
+  const moveToPrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
   const handleKeyPress = (e: KeyboardEvent) => {
+    // Ignore keyboard shortcuts when user is typing in input fields
+    if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+      return;
+    }
+
     if (e.key === 'ArrowUp' || e.key === 'u') {
       handleVote('up');
     } else if (e.key === 'ArrowDown' || e.key === 'd') {
       handleVote('down');
     } else if (e.key === 'ArrowRight' || e.key === 's') {
       handleSkip();
+    } else if (e.key === 'ArrowLeft') {
+      moveToPrevious();
     } else if (e.key === ' ') {
       e.preventDefault();
       togglePlay();
@@ -267,7 +280,21 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
         </div>
 
         {/* Action buttons */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-4 gap-4 mb-4">
+          <button
+            onClick={moveToPrevious}
+            disabled={currentIndex === 0}
+            className={`${
+              currentIndex === 0
+                ? 'bg-gray-800 cursor-not-allowed opacity-50'
+                : 'bg-blue-600 hover:bg-blue-700 transform hover:scale-105 active:scale-95'
+            } text-white font-bold py-6 px-8 rounded-xl transition-all`}
+          >
+            <div className="text-4xl mb-2">⏮️</div>
+            <div className="text-sm">Previous</div>
+            <div className="text-xs text-gray-300">(← arrow)</div>
+          </button>
+
           <button
             onClick={() => handleVote('down')}
             className="bg-red-600 hover:bg-red-700 text-white font-bold py-6 px-8 rounded-xl transition-all transform hover:scale-105 active:scale-95"
@@ -306,7 +333,7 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
 
         {/* Help text */}
         <div className="text-center text-gray-500 text-sm mt-8">
-          Use keyboard shortcuts for faster reviewing: ↑/U for upvote, ↓/D for downvote, →/S to skip, Space to play/pause
+          Use keyboard shortcuts for faster reviewing: ↑/U for upvote, ↓/D for downvote, →/S to skip, ← to go back, Space to play/pause
         </div>
       </div>
     </div>
