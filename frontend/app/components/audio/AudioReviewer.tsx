@@ -24,7 +24,7 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [stats, setStats] = useState({ upvoted: 0, downvoted: 0, total: 0 });
@@ -54,17 +54,21 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
       const params = new URLSearchParams({
         limit: '50',
         filter: 'unwatched',
-        offset: offset.toString(),
       });
+
+      // Add cursor if we have one (for pagination)
+      if (cursor) {
+        params.append('cursor', cursor);
+      }
 
       const response = await fetch(`/api/audio-list?${params}`);
       const data = await response.json();
 
       console.log('Loaded files:', data);
 
-      // Keep files in order (no randomization)
+      // Keep files in order (sorted by uploadedAt oldest first)
       setAudioFiles(prev => [...prev, ...data.blobs]);
-      setOffset(data.offset);
+      setCursor(data.cursor);
       setHasMore(data.hasMore);
     } catch (error) {
       console.error('Error loading audio files:', error);
@@ -217,6 +221,11 @@ export default function AudioReviewer({ onComplete }: AudioReviewerProps) {
         <div className="text-gray-400">
           {currentIndex + 1} / {audioFiles.length}
         </div>
+        {hasMore && (
+          <div className="text-gray-500 text-xs">
+            (more files loading...)
+          </div>
+        )}
       </div>
 
       {/* Main content */}

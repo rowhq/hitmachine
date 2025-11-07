@@ -12,6 +12,7 @@ interface AudioFile {
     watched: boolean;
     vote: 'up' | 'down' | null;
     timestamp: number;
+    comment?: string;
   };
 }
 
@@ -203,6 +204,11 @@ export default function ReviewedAudioPage() {
                         {new Date(file.uploadedAt).toLocaleString()} •{' '}
                         {(file.size / 1024).toFixed(1)} KB
                       </div>
+                      {file.status.comment && (
+                        <div className="mt-2 text-sm text-gray-300 bg-gray-700/50 rounded p-2">
+                          💬 {file.status.comment}
+                        </div>
+                      )}
                     </div>
 
                     {/* Vote indicator */}
