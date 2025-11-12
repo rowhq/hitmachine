@@ -15,13 +15,17 @@ import usdcAbi from "../../../abi/mockUsdc.json";
 import storeAbi from "../../../abi/nanoMusicStore.json";
 import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
+import { withRetry, RateLimiter } from "../../../utils/rpc-retry";
 
 const PROD_WALLET = process.env.PROD_WALLET!;
 const CLAWBACK_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC - trigger clawback
 const TARGET_THRESHOLD = BigInt(0); // Clawback ALL funds (no stopping point)
 const MIN_WALLET_AGE_MS = 5 * 60 * 1000; // Minimum 5 minutes before clawback (safety buffer)
-const BATCH_SIZE = 500; // Process 500 wallets in parallel for balance checks (DRPC: 3000 RPS)
-const PARALLEL_TX_LIMIT = 50; // Max 50 parallel transactions (well under 3000 RPS limit)
+const BATCH_SIZE = 100; // Process 100 wallets in parallel for balance checks
+const PARALLEL_TX_LIMIT = 10; // Max 10 parallel transactions to avoid rate limits
+
+// Rate limiter: ~50 requests per second with burst capacity of 100
+const rateLimiter = new RateLimiter(50, 100);
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
@@ -49,27 +53,33 @@ export async function GET(request: NextRequest) {
       path: `m/44'/60'/0'/0/0`,
     });
 
-    // Check store balance
-    const storeBalance = await publicClient.readContract({
-      address: CONTRACTS.storeContract,
-      abi: storeAbi,
-      functionName: 'getContractBalance',
-    }) as bigint;
+    // Check store balance with retry
+    const storeBalance = await withRetry(() =>
+      publicClient.readContract({
+        address: CONTRACTS.storeContract,
+        abi: storeAbi,
+        functionName: 'getContractBalance',
+      })
+    ) as bigint;
 
-    // Check band balance
-    const bandBalance = await publicClient.readContract({
-      address: CONTRACTS.bandContract,
-      abi: bandAbi,
-      functionName: 'getUSDCBalance',
-    }) as bigint;
+    // Check band balance with retry
+    const bandBalance = await withRetry(() =>
+      publicClient.readContract({
+        address: CONTRACTS.bandContract,
+        abi: bandAbi,
+        functionName: 'getUSDCBalance',
+      })
+    ) as bigint;
 
-    // Check nano wallet balance
-    const nanoWalletBalance = await publicClient.readContract({
-      address: CONTRACTS.usdcAddress,
-      abi: usdcAbi,
-      functionName: 'balanceOf',
-      args: [nanoWallet.address],
-    }) as bigint;
+    // Check nano wallet balance with retry
+    const nanoWalletBalance = await withRetry(() =>
+      publicClient.readContract({
+        address: CONTRACTS.usdcAddress,
+        abi: usdcAbi,
+        functionName: 'balanceOf',
+        args: [nanoWallet.address],
+      })
+    ) as bigint;
 
     const totalBalance = storeBalance + bandBalance + nanoWalletBalance;
     
@@ -232,13 +242,17 @@ export async function GET(request: NextRequest) {
             return null;
           }
 
-          // Check balance
-          const balance = await publicClient.readContract({
-            address: CONTRACTS.usdcAddress,
-            abi: usdcAbi,
-            functionName: 'balanceOf',
-            args: [walletAddress],
-          }) as bigint;
+          // Check balance with rate limiting and retry
+          const balance = await rateLimiter.execute(() =>
+            withRetry(() =>
+              publicClient.readContract({
+                address: CONTRACTS.usdcAddress,
+                abi: usdcAbi,
+                functionName: 'balanceOf',
+                args: [walletAddress],
+              })
+            )
+          ) as bigint;
 
           if (balance === BigInt(0)) {
             return null;
@@ -282,38 +296,50 @@ export async function GET(request: NextRequest) {
             innerInput: "0x",
           });
 
-          // Check allowance
-          const allowance = await publicClient.readContract({
-            address: CONTRACTS.usdcAddress,
-            abi: usdcAbi,
-            functionName: 'allowance',
-            args: [wallet.address, CONTRACTS.bandContract],
-          }) as bigint;
+          // Check allowance with rate limiting and retry
+          const allowance = await rateLimiter.execute(() =>
+            withRetry(() =>
+              publicClient.readContract({
+                address: CONTRACTS.usdcAddress,
+                abi: usdcAbi,
+                functionName: 'allowance',
+                args: [wallet.address, CONTRACTS.bandContract],
+              })
+            )
+          ) as bigint;
 
           let approveTx;
           if (allowance < wallet.balance) {
             console.log(`[CRON] Approving Band for ${wallet.address}`);
-            approveTx = await walletClient.writeContract({
-              address: CONTRACTS.usdcAddress,
-              abi: usdcAbi,
-              functionName: 'approve',
-              args: [CONTRACTS.bandContract, BigInt(2) ** BigInt(256) - BigInt(1)],
-              chain: currentChain,
-              paymaster: CONTRACTS.paymasterAddress,
-              paymasterInput: paymasterInput,
-            });
+            approveTx = await rateLimiter.execute(() =>
+              withRetry(() =>
+                walletClient.writeContract({
+                  address: CONTRACTS.usdcAddress,
+                  abi: usdcAbi,
+                  functionName: 'approve',
+                  args: [CONTRACTS.bandContract, BigInt(2) ** BigInt(256) - BigInt(1)],
+                  chain: currentChain,
+                  paymaster: CONTRACTS.paymasterAddress,
+                  paymasterInput: paymasterInput,
+                })
+              )
+            );
           }
 
-          // Call revoke function
-          const revokeTx = await walletClient.writeContract({
-            address: CONTRACTS.bandContract,
-            abi: bandAbi,
-            functionName: 'revoke',
-            args: [],
-            chain: currentChain,
-            paymaster: CONTRACTS.paymasterAddress,
-            paymasterInput: paymasterInput,
-          });
+          // Call revoke function with rate limiting and retry
+          const revokeTx = await rateLimiter.execute(() =>
+            withRetry(() =>
+              walletClient.writeContract({
+                address: CONTRACTS.bandContract,
+                abi: bandAbi,
+                functionName: 'revoke',
+                args: [],
+                chain: currentChain,
+                paymaster: CONTRACTS.paymasterAddress,
+                paymasterInput: paymasterInput,
+              })
+            )
+          );
 
           // Log to Supabase
           await supabase.from('wallet_events').insert({

@@ -37,7 +37,7 @@ export const NETWORKS = {
   mainnet: {
     name: "Sophon Mainnet",
     chainId: 50104,
-    rpcUrl: "https://lb.drpc.org/ogrpc?network=sophon&dkey=AkrZfCEJbkMGsnvldbtfwxoiLQEHqE8R8I5dGpwEOulP",
+    rpcUrl: process.env.SOPHON_RPC_URL || "https://rpc.sophon.xyz",
     explorerUrl: "https://explorer.sophon.xyz",
     contracts: {
       storeContract:

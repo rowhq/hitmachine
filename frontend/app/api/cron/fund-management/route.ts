@@ -15,6 +15,7 @@ import usdcAbi from "../../../abi/mockUsdc.json";
 import storeAbi from "../../../abi/nanoMusicStore.json";
 import bandAbi from "../../../abi/nanoBand.json";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../../config/environment";
+import { withRetry } from "../../../utils/rpc-retry";
 
 const PROD_WALLET = process.env.PROD_WALLET!;
 const STORE_WITHDRAWAL_THRESHOLD = BigInt(1000 * 1e6); // 1,000 USDC
@@ -52,27 +53,33 @@ export async function GET(request: NextRequest) {
     console.log(`[CRON] Nano wallet address (index 0): ${nanoWallet.address}`);
     console.log(`[CRON] Marketing wallet address (index 4): ${marketingWallet.address}`);
 
-    // Check store balance
-    const storeBalance = await publicClient.readContract({
-      address: CONTRACTS.storeContract,
-      abi: storeAbi,
-      functionName: 'getContractBalance',
-    }) as bigint;
+    // Check store balance with retry
+    const storeBalance = await withRetry(() =>
+      publicClient.readContract({
+        address: CONTRACTS.storeContract,
+        abi: storeAbi,
+        functionName: 'getContractBalance',
+      })
+    ) as bigint;
 
-    // Check band balance
-    const bandBalance = await publicClient.readContract({
-      address: CONTRACTS.bandContract,
-      abi: bandAbi,
-      functionName: 'getUSDCBalance',
-    }) as bigint;
+    // Check band balance with retry
+    const bandBalance = await withRetry(() =>
+      publicClient.readContract({
+        address: CONTRACTS.bandContract,
+        abi: bandAbi,
+        functionName: 'getUSDCBalance',
+      })
+    ) as bigint;
 
-    // Check nano wallet balance
-    const nanoWalletBalance = await publicClient.readContract({
-      address: CONTRACTS.usdcAddress,
-      abi: usdcAbi,
-      functionName: 'balanceOf',
-      args: [nanoWallet.address],
-    }) as bigint;
+    // Check nano wallet balance with retry
+    const nanoWalletBalance = await withRetry(() =>
+      publicClient.readContract({
+        address: CONTRACTS.usdcAddress,
+        abi: usdcAbi,
+        functionName: 'balanceOf',
+        args: [nanoWallet.address],
+      })
+    ) as bigint;
 
     console.log(`[CRON] Store balance: ${formatUnits(storeBalance, 6)} USDC`);
     console.log(`[CRON] Band balance: ${formatUnits(bandBalance, 6)} USDC`);
