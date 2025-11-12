@@ -21,7 +21,7 @@ export const NETWORKS = {
   testnet: {
     name: "Sophon Testnet",
     chainId: 531050104,
-    rpcUrl: "https://rpc.testnet.sophon.xyz",
+    rpcUrl: process.env.SOPHON_RPC_URL || "https://rpc.testnet.sophon.xyz",
     explorerUrl: "https://explorer.testnet.sophon.xyz",
     contracts: {
       storeContract:
@@ -37,7 +37,7 @@ export const NETWORKS = {
   mainnet: {
     name: "Sophon Mainnet",
     chainId: 50104,
-    rpcUrl: "https://rpc.sophon.xyz",
+    rpcUrl: process.env.SOPHON_RPC_URL || "https://rpc.sophon.xyz",
     explorerUrl: "https://explorer.sophon.xyz",
     contracts: {
       storeContract:
