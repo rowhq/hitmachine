@@ -10,6 +10,7 @@ import { corsHeaders } from "../cors";
 import { CONTRACTS, CURRENT_NETWORK, NETWORK } from "../../config/environment";
 import { getGiftCardPrice } from "../../utils/price-service";
 import { getClientIP } from "../../utils/ip-detection";
+import { withRetry } from "../../utils/rpc-retry";
 import {
   trackPurchaseAttempt,
   trackPurchaseCompleted,
@@ -162,19 +163,23 @@ export async function POST(request: NextRequest) {
     // Fetch the current gift card price from the contract
     const giftcardPrice = await getGiftCardPrice();
 
-    // Get the nonce for the wallet
-    const nonce = await publicClient.getTransactionCount({
-      address: account.address,
-      blockTag: 'pending'
-    });
+    // Get the nonce for the wallet with retry
+    const nonce = await withRetry(() =>
+      publicClient.getTransactionCount({
+        address: account.address,
+        blockTag: 'pending'
+      })
+    );
 
-    // Check current allowance
-    const currentAllowance = (await publicClient.readContract({
-      address: config.usdcAddress,
-      abi: usdcAbi,
-      functionName: "allowance",
-      args: [account.address, config.storeContract],
-    })) as bigint;
+    // Check current allowance with retry
+    const currentAllowance = (await withRetry(() =>
+      publicClient.readContract({
+        address: config.usdcAddress,
+        abi: usdcAbi,
+        functionName: "allowance",
+        args: [account.address, config.storeContract],
+      })
+    )) as bigint;
 
     console.log(
       `Current allowance: ${currentAllowance.toString()}, Gift card price: ${giftcardPrice.toString()}`
@@ -194,13 +199,15 @@ export async function POST(request: NextRequest) {
         `Current allowance: ${currentAllowance.toString()}, needed: ${giftcardPrice.toString()}. Approving...`
       );
 
-      // First check the wallet has USDC balance
-      const usdcBalance = (await publicClient.readContract({
-        address: config.usdcAddress,
-        abi: usdcAbi,
-        functionName: "balanceOf",
-        args: [account.address],
-      })) as bigint;
+      // First check the wallet has USDC balance with retry
+      const usdcBalance = (await withRetry(() =>
+        publicClient.readContract({
+          address: config.usdcAddress,
+          abi: usdcAbi,
+          functionName: "balanceOf",
+          args: [account.address],
+        })
+      )) as bigint;
 
       console.log(`Wallet USDC balance: ${usdcBalance.toString()}`);
       
@@ -231,17 +238,19 @@ export async function POST(request: NextRequest) {
         `Preparing approval tx with nonce ${nonce} from ${account.address} to ${config.storeContract}`
       );
 
-      // Send approval transaction with current nonce
-      const approveTx = await walletClient.writeContract({
-        address: config.usdcAddress,
-        abi: usdcAbi,
-        functionName: "approve",
-        args: [config.storeContract, approvalAmount],
-        chain: config.chain,
-        nonce: nonce,
-        paymaster: config.paymasterAddress,
-        paymasterInput: paymasterInput
-      });
+      // Send approval transaction with current nonce and retry
+      const approveTx = await withRetry(() =>
+        walletClient.writeContract({
+          address: config.usdcAddress,
+          abi: usdcAbi,
+          functionName: "approve",
+          args: [config.storeContract, approvalAmount],
+          chain: config.chain,
+          nonce: nonce,
+          paymaster: config.paymasterAddress,
+          paymasterInput: paymasterInput
+        })
+      );
 
       console.log(`Approval tx sent: ${approveTx}`);
       transactions.push({ type: 'approval', hash: approveTx });
@@ -256,17 +265,19 @@ export async function POST(request: NextRequest) {
         `Sending buyGiftcard tx with nonce ${purchaseNonce}`
       );
 
-      // Send purchase transaction
-      const purchaseTx = await walletClient.writeContract({
-        address: config.storeContract,
-        abi: storeAbi,
-        functionName: "buyGiftcard",
-        args: [],
-        chain: config.chain,
-        nonce: purchaseNonce,
-        paymaster: config.paymasterAddress,
-        paymasterInput: paymasterInput
-      });
+      // Send purchase transaction with retry
+      const purchaseTx = await withRetry(() =>
+        walletClient.writeContract({
+          address: config.storeContract,
+          abi: storeAbi,
+          functionName: "buyGiftcard",
+          args: [],
+          chain: config.chain,
+          nonce: purchaseNonce,
+          paymaster: config.paymasterAddress,
+          paymasterInput: paymasterInput
+        })
+      );
 
       console.log(`Purchase tx sent: ${purchaseTx}`);
       transactions.push({ type: 'purchase', hash: purchaseTx });
