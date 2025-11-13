@@ -20,8 +20,8 @@ const PROD_WALLET = process.env.PROD_WALLET!;
 const CLAWBACK_THRESHOLD = BigInt(10000 * 1e6); // 10,000 USDC - trigger clawback
 const TARGET_THRESHOLD = BigInt(0); // Clawback ALL funds (no stopping point)
 const MIN_WALLET_AGE_MS = 5 * 60 * 1000; // Minimum 5 minutes before clawback (safety buffer)
-const BATCH_SIZE = 500; // Process 500 wallets in parallel for balance checks (DRPC: 3000 RPS)
-const PARALLEL_TX_LIMIT = 50; // Max 50 parallel transactions (well under 3000 RPS limit)
+const BATCH_SIZE = 500; // Process 500 wallets in parallel for balance checks
+const PARALLEL_TX_LIMIT = 50; // Max 50 parallel transactions
 
 // Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\n/g, "") || "";
